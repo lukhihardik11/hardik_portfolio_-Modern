@@ -1,8 +1,9 @@
 /*
- * DESIGN SYSTEM: "Quiet Authority"
- * Dieter Rams minimalism meets dark luxury.
- * Dark charcoal base, warm silver text, muted steel blue accent.
- * Typography: Instrument Serif (display) + Geist (body) + JetBrains Mono (metrics)
+ * DESIGN SYSTEM — Phase 1A Foundation
+ * Reference-fidelity design tokens for Hardik Lukhi's portfolio.
+ * Warm pearl light / deep charcoal dark / teal primary / amber accent.
+ * Typography: DM Sans (display + body) + JetBrains Mono (mono microcopy).
+ * All color tokens preserved from reference baseline.
  */
 
 @import "tailwindcss";
@@ -47,131 +48,171 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-
-  /* Custom design tokens */
-  --font-display: 'Instrument Serif', Georgia, serif;
-  --font-body: 'Geist', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
-
-  --color-steel: oklch(0.55 0.06 230);
-  --color-steel-light: oklch(0.65 0.06 230);
-  --color-steel-dim: oklch(0.40 0.04 230);
-  --color-warm-silver: oklch(0.82 0.01 80);
-  --color-warm-silver-dim: oklch(0.60 0.01 80);
+  --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* ═══════════════════════════════════════════
-   LIGHT MODE (default when no .dark class)
-   Warm Cream Editorial
-   ═══════════════════════════════════════════ */
+/* ══════════════════════════════════════
+   LIGHT MODE — warm pearl (default)
+   ══════════════════════════════════════ */
 :root {
-  --radius: 0.5rem;
+  --radius: 1.5rem;
+  --exploded-label-bg: rgba(255, 255, 255, 0.85);
+  --exploded-label-fg: rgba(20, 25, 35, 0.9);
+  --background: oklch(0.965 0.004 80);
+  --foreground: oklch(0.15 0.015 60);
+  --card: oklch(0.98 0.003 80 / 60%);
+  --card-foreground: oklch(0.15 0.015 60);
+  --popover: oklch(0.98 0.003 80 / 90%);
+  --popover-foreground: oklch(0.15 0.015 60);
+  --primary: oklch(0.55 0.18 230);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.92 0.004 80 / 80%);
+  --secondary-foreground: oklch(0.30 0.015 60);
+  --muted: oklch(0.92 0.004 80);
+  --muted-foreground: oklch(0.45 0.012 60);
+  --accent: oklch(0.75 0.15 65);
+  --accent-foreground: oklch(0.18 0.03 60);
+  --destructive: oklch(0.55 0.24 27);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.50 0.005 80 / 12%);
+  --input: oklch(0.50 0.005 80 / 15%);
+  --ring: oklch(0.55 0.18 230);
+  --chart-1: oklch(0.55 0.18 230);
+  --chart-2: oklch(0.75 0.15 65);
+  --chart-3: oklch(0.50 0.14 200);
+  --chart-4: oklch(0.68 0.12 65);
+  --chart-5: oklch(0.45 0.14 230);
+  --sidebar: oklch(0.95 0.004 80);
+  --sidebar-foreground: oklch(0.15 0.015 60);
+  --sidebar-primary: oklch(0.55 0.18 230);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.92 0.004 80);
+  --sidebar-accent-foreground: oklch(0.15 0.015 60);
+  --sidebar-border: oklch(0.50 0.005 80 / 12%);
+  --sidebar-ring: oklch(0.55 0.18 230);
 
-  --primary: oklch(0.45 0.10 230);
-  --primary-foreground: oklch(0.98 0 0);
+  /* Jelly material tokens — light
+     Phase 3C: reduced surface opacity from 55% to 38% to fix white-card artifact */
+  --jelly-teal: oklch(0.55 0.18 230);
+  --jelly-amber: oklch(0.75 0.15 65);
+  --jelly-surface: oklch(0.99 0.002 80 / 38%);
+  --jelly-surface-hover: oklch(0.99 0.002 80 / 52%);
+  --jelly-border: oklch(0 0 0 / 8%);
+  --jelly-border-hover: oklch(0 0 0 / 13%);
+  --jelly-shadow-ambient: oklch(0.20 0.01 60 / 6%);
+  --jelly-shadow-deep: oklch(0.20 0.01 60 / 10%);
+  --jelly-highlight: oklch(1 0 0 / 35%);
+  --jelly-inner-shadow: oklch(0 0 0 / 3%);
+  --jelly-caustic-teal: oklch(0.55 0.18 230 / 20%);
+  --jelly-caustic-amber: oklch(0.75 0.15 65 / 20%);
+  --jelly-glass-thickness: 1px;
+  --jelly-gel-teal-fill: oklch(0.60 0.16 230 / 10%);
+  --jelly-gel-amber-fill: oklch(0.75 0.14 65 / 10%);
 
-  --background: oklch(0.975 0.005 80);
-  --foreground: oklch(0.18 0.01 60);
+  /* Foundation tokens — shadow (derived from jelly-shadow-ambient/deep) */
+  --shadow-sm: 0 1px 2px oklch(0.20 0.01 60 / 4%);
+  --shadow-md: 0 2px 8px -2px oklch(0.20 0.01 60 / 6%), 0 4px 16px -4px oklch(0.20 0.01 60 / 8%);
+  --shadow-lg: 0 4px 16px -4px oklch(0.20 0.01 60 / 8%), 0 12px 32px -8px oklch(0.20 0.01 60 / 10%);
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.01 60);
+  /* Foundation tokens — motion duration */
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.01 60);
-
-  --secondary: oklch(0.96 0.005 80);
-  --secondary-foreground: oklch(0.35 0.01 60);
-
-  --muted: oklch(0.94 0.005 80);
-  --muted-foreground: oklch(0.50 0.01 60);
-
-  --accent: oklch(0.45 0.10 230);
-  --accent-foreground: oklch(0.98 0 0);
-
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.98 0 0);
-
-  --border: oklch(0 0 0 / 8%);
-  --input: oklch(0 0 0 / 8%);
-  --ring: oklch(0.45 0.10 230);
-
-  --chart-1: oklch(0.45 0.10 230);
-  --chart-2: oklch(0.55 0.08 230);
-  --chart-3: oklch(0.35 0.08 230);
-  --chart-4: oklch(0.65 0.06 230);
-  --chart-5: oklch(0.25 0.06 230);
-
-  --sidebar: oklch(0.98 0.005 80);
-  --sidebar-foreground: oklch(0.18 0.01 60);
-  --sidebar-primary: oklch(0.45 0.10 230);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.94 0.005 80);
-  --sidebar-accent-foreground: oklch(0.18 0.01 60);
-  --sidebar-border: oklch(0 0 0 / 8%);
-  --sidebar-ring: oklch(0.45 0.10 230);
+  /* Foundation tokens — spacing scale (8px grid) */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+  --space-24: 6rem;     /* 96px */
+  --space-32: 8rem;     /* 128px */
 }
 
-/* ═══════════════════════════════════════════
-   DARK MODE — Deep Charcoal Luxury
-   Applied when .dark class is on <html>
-   ═══════════════════════════════════════════ */
+/* ══════════════════════════════════════
+   DARK MODE — deep charcoal
+   ══════════════════════════════════════ */
 .dark {
-  --primary: oklch(0.55 0.08 230);
-  --primary-foreground: oklch(0.98 0 0);
-
-  /* Deep charcoal background — warm, not blue-black */
-  --background: oklch(0.13 0.005 60);
-  --foreground: oklch(0.82 0.01 80);
-
-  /* Cards: slightly elevated from background */
-  --card: oklch(0.16 0.005 60);
-  --card-foreground: oklch(0.82 0.01 80);
-
-  --popover: oklch(0.16 0.005 60);
-  --popover-foreground: oklch(0.82 0.01 80);
-
-  --secondary: oklch(0.20 0.005 60);
-  --secondary-foreground: oklch(0.70 0.01 80);
-
-  --muted: oklch(0.22 0.005 60);
-  --muted-foreground: oklch(0.55 0.01 80);
-
-  --accent: oklch(0.55 0.08 230);
-  --accent-foreground: oklch(0.98 0 0);
-
-  --destructive: oklch(0.60 0.20 25);
-  --destructive-foreground: oklch(0.98 0 0);
-
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.55 0.08 230);
-
-  --chart-1: oklch(0.55 0.08 230);
-  --chart-2: oklch(0.65 0.06 230);
-  --chart-3: oklch(0.45 0.06 230);
-  --chart-4: oklch(0.75 0.04 230);
-  --chart-5: oklch(0.35 0.04 230);
-
-  --sidebar: oklch(0.15 0.005 60);
-  --sidebar-foreground: oklch(0.82 0.01 80);
-  --sidebar-primary: oklch(0.55 0.08 230);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.20 0.005 60);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
+  --exploded-label-bg: rgba(20, 25, 35, 0.8);
+  --exploded-label-fg: rgba(255, 255, 255, 0.85);
+  --background: oklch(0.14 0.008 60);
+  --foreground: oklch(0.93 0.006 80);
+  --card: oklch(1 0 0 / 4%);
+  --card-foreground: oklch(0.93 0.006 80);
+  --popover: oklch(0.18 0.008 60 / 95%);
+  --popover-foreground: oklch(0.93 0.006 80);
+  --primary: oklch(0.62 0.18 230);
+  --primary-foreground: oklch(0.10 0.005 60);
+  --secondary: oklch(1 0 0 / 3%);
+  --secondary-foreground: oklch(0.78 0.006 80);
+  --muted: oklch(0.22 0.008 60);
+  --muted-foreground: oklch(0.65 0.008 80);
+  --accent: oklch(0.75 0.15 65);
+  --accent-foreground: oklch(0.14 0.02 60);
+  --destructive: oklch(0.60 0.22 27);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(1 0 0 / 6%);
+  --input: oklch(1 0 0 / 6%);
+  --ring: oklch(0.62 0.18 230);
+  --chart-1: oklch(0.62 0.18 230);
+  --chart-2: oklch(0.75 0.15 65);
+  --chart-3: oklch(0.55 0.14 200);
+  --chart-4: oklch(0.70 0.12 65);
+  --chart-5: oklch(0.48 0.14 230);
+  --sidebar: oklch(0.16 0.008 60);
+  --sidebar-foreground: oklch(0.93 0.006 80);
+  --sidebar-primary: oklch(0.62 0.18 230);
+  --sidebar-primary-foreground: oklch(0.10 0.005 60);
+  --sidebar-accent: oklch(0.22 0.008 60);
+  --sidebar-accent-foreground: oklch(0.93 0.006 80);
   --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.55 0.08 230);
+  --sidebar-ring: oklch(0.62 0.18 230);
+
+  /* Jelly material tokens — dark */
+  --jelly-teal: oklch(0.62 0.18 230);
+  --jelly-amber: oklch(0.78 0.15 65);
+  --jelly-surface: oklch(1 0 0 / 3%);
+  --jelly-surface-hover: oklch(1 0 0 / 5%);
+  --jelly-border: oklch(1 0 0 / 8%);
+  --jelly-border-hover: oklch(1 0 0 / 14%);
+  --jelly-shadow-ambient: oklch(0 0 0 / 15%);
+  --jelly-shadow-deep: oklch(0 0 0 / 25%);
+  --jelly-highlight: oklch(1 0 0 / 12%);
+  --jelly-inner-shadow: oklch(0 0 0 / 12%);
+  --jelly-caustic-teal: oklch(0.62 0.18 230 / 20%);
+  --jelly-caustic-amber: oklch(0.78 0.15 65 / 20%);
+  --jelly-glass-thickness: 1px;
+  --jelly-gel-teal-fill: oklch(0.55 0.20 230 / 6%);
+  --jelly-gel-amber-fill: oklch(0.75 0.16 65 / 6%);
+
+  /* Foundation tokens — shadow (dark mode) */
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 8%);
+  --shadow-md: 0 2px 8px -2px oklch(0 0 0 / 12%), 0 4px 16px -4px oklch(0 0 0 / 15%);
+  --shadow-lg: 0 4px 16px -4px oklch(0 0 0 / 15%), 0 12px 32px -8px oklch(0 0 0 / 20%);
 }
 
+/* ══════════════════════════════════════
+   BASE LAYER
+   ══════════════════════════════════════ */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
-    font-family: var(--font-body);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
+    @apply bg-background text-foreground font-sans antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    animation: page-fade-in 0.6s ease-out;
+  }
+  @keyframes page-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -184,110 +225,1406 @@
   input[type="radio"]:not(:disabled) {
     @apply cursor-pointer;
   }
-
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
-  }
-
-  /* Selection color */
-  ::selection {
-    background: oklch(0.55 0.08 230 / 30%);
-  }
 }
 
+/* ══════════════════════════════════════
+   COMPONENT LAYER — Container + utilities
+   ══════════════════════════════════════ */
 @layer components {
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1.25rem;
-    padding-right: 1.25rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
-
   .flex {
     min-height: 0;
     min-width: 0;
   }
-
   @media (min-width: 640px) {
-    .container {
-      padding-left: 2rem;
-      padding-right: 2rem;
-    }
+    .container { padding-left: 2rem; padding-right: 2rem; }
   }
-
+  @media (min-width: 768px) {
+    .container { padding-left: 2.5rem; padding-right: 2.5rem; }
+  }
   @media (min-width: 1024px) {
-    .container {
-      padding-left: 3rem;
-      padding-right: 3rem;
-      max-width: 1200px;
-    }
+    .container { padding-left: 3rem; padding-right: 3rem; max-width: 1200px; }
   }
-
-  /* Typography utilities */
-  .font-display {
-    font-family: var(--font-display);
+  @media (min-width: 1280px) {
+    .container { padding-left: 3rem; padding-right: 3rem; max-width: 1280px; }
   }
-
-  .font-body {
-    font-family: var(--font-body);
-  }
-
-  .font-mono {
-    font-family: var(--font-mono);
-  }
-
-  /* Section number styling */
-  .section-number {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: oklch(0.55 0.08 230);
-  }
-
-  /* Subtle grain texture overlay */
-  .grain-overlay::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    opacity: 0.03;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 1;
+  @media (min-width: 1536px) {
+    .container { padding-left: 4rem; padding-right: 4rem; max-width: 1400px; }
   }
 }
 
-/* Spotlight animation */
-@keyframes spotlight {
-  0% {
-    opacity: 0;
-    transform: translate(-72%, -62%) scale(0.5);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(-50%, -40%) scale(1);
+/* ══════════════════════════════════════
+   PHASE 1C — STANDARD VISUAL POLISH UTILITIES
+   Section divider, card depth, skill bar, button glow, footer
+   All values use var() token references only.
+   ══════════════════════════════════════ */
+
+/* Section divider — CSS-only gradient line between sections */
+.section-divider::after {
+  content: '';
+  display: block;
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--border) 30%,
+    var(--border) 70%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Card depth — subtle gradient overlay for visual depth */
+.card-polished {
+  background: linear-gradient(
+    to bottom right,
+    var(--card) 0%,
+    var(--card) 100%
+  );
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--duration-normal) ease, transform var(--duration-normal) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .card-polished:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
   }
 }
 
-.animate-spotlight {
-  animation: spotlight 2s ease 0.75s 1 forwards;
+/* Metric card — top accent border */
+.card-metric {
+  border-top: 2px solid var(--primary);
 }
 
-/* Smooth page transitions */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+/* Current role card — left accent border */
+.card-current {
+  border-left: 2px solid var(--primary);
+}
+
+/* Skill bar — gradient fill */
+.skill-bar-fill {
+  background: linear-gradient(
+    90deg,
+    oklch(from var(--primary) l c h / 55%) 0%,
+    oklch(from var(--primary) l c h / 80%) 100%
+  );
+  border-radius: 999px;
+}
+
+/* Button glow — subtle primary glow for CTA */
+.btn-glow {
+  box-shadow:
+    var(--shadow-sm),
+    0 0 8px oklch(from var(--primary) l c h / 15%);
+  transition: box-shadow var(--duration-normal) ease, opacity var(--duration-normal) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-glow:hover {
+    box-shadow:
+      var(--shadow-md),
+      0 0 12px oklch(from var(--primary) l c h / 20%);
   }
 }
 
-.animate-fade-in-up {
-  animation: fadeInUp 0.8s ease-out forwards;
+/* Footer gradient separator */
+.footer-separator {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--border) 20%,
+    var(--border) 80%,
+    transparent 100%
+  );
+}
+
+/* Section header accent — small line before mono label */
+.section-label-accent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.section-label-accent::before {
+  content: '';
+  display: block;
+  width: 1.5rem;
+  height: 1px;
+  background: var(--primary);
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════
+   BODY AMBIENT GRADIENTS
+   ══════════════════════════════════════ */
+body {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 0% 0%, oklch(0.55 0.18 230 / 2%) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, oklch(0.75 0.15 65 / 1.5%) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 35% at 50% 50%, oklch(0.50 0.005 80 / 1%) 0%, transparent 60%);
+}
+.dark body {
+  background-image:
+    radial-gradient(ellipse 100% 60% at 0% 0%, oklch(0.55 0.18 230 / 6%) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 50% at 100% 100%, oklch(0.75 0.15 65 / 4%) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 50%, oklch(0.30 0.005 80 / 3%) 0%, transparent 60%);
+}
+
+/* ══════════════════════════════════════
+   JELLY CARD — OFF state: slim, editorial, minimal
+   Phase 3C: reduced border-radius, tighter shadows, lower specular
+   ══════════════════════════════════════ */
+.jelly-card {
+  background: var(--jelly-surface);
+  backdrop-filter: blur(8px) saturate(1.1);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+  border: 1px solid var(--jelly-border);
+  border-radius: 0.875rem;
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 20%),
+    0 2px 8px -2px var(--jelly-shadow-ambient);
+  transition: box-shadow 0.35s ease-out, background 0.35s ease-out, border-color 0.35s ease-out;
+  position: relative;
+  will-change: transform;
+  overflow: hidden;
+}
+/* Specular highlight — Phase 3C: reduced to 35% height, lower opacity */
+.jelly-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 35%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, oklch(1 0 0 / 20%) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.3;
+}
+.jelly-card::after {
+  display: none;
+}
+/* Hover — lift (guarded for fine-pointer devices) */
+@media (hover: hover) and (pointer: fine) {
+  .jelly-card:hover {
+    background: var(--jelly-surface-hover);
+    border-color: var(--jelly-border-hover);
+    box-shadow:
+      0 1px 0 oklch(1 0 0 / 25%),
+      0 4px 16px -4px var(--jelly-shadow-deep);
+  }
+}
+
+/* ══════════════════════════════════════
+   JELLY GLOW — Caustic light bleed
+   ══════════════════════════════════════ */
+.glow-teal {
+  box-shadow:
+    0 0 10px oklch(0.55 0.18 230 / 6%),
+    0 6px 18px -6px oklch(0.55 0.18 230 / 8%);
+}
+.glow-amber {
+  box-shadow:
+    0 0 10px oklch(0.75 0.15 65 / 6%),
+    0 6px 18px -6px oklch(0.75 0.15 65 / 8%);
+}
+
+/* ══════════════════════════════════════
+   JELLY MATERIAL — Translucent colored glass
+   ══════════════════════════════════════ */
+.jelly-material-teal {
+  background: radial-gradient(ellipse 70% 60% at 30% 25%,
+    oklch(0.78 0.08 230 / 60%),
+    oklch(0.60 0.16 230 / 65%) 50%,
+    oklch(0.48 0.22 230 / 70%) 100%);
+  border: none;
+  box-shadow:
+    0 0 1px oklch(1 0 0 / 15%),
+    0 4px 12px oklch(0.50 0.20 230 / 25%);
+}
+.jelly-material-amber {
+  background: radial-gradient(ellipse 70% 60% at 30% 25%,
+    oklch(0.92 0.06 65 / 60%),
+    oklch(0.75 0.14 65 / 65%) 50%,
+    oklch(0.65 0.18 65 / 70%) 100%);
+  border: none;
+  box-shadow:
+    0 0 1px oklch(1 0 0 / 15%),
+    0 4px 12px oklch(0.70 0.16 65 / 25%);
+}
+
+/* ══════════════════════════════════════
+   JELLY BUTTONS — Phase 3C: slimmer OFF state
+   Reduced padding, tighter shadows, cleaner proportions
+   ══════════════════════════════════════ */
+.jelly-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+  will-change: transform;
+  transform-origin: center 60%;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.35s ease-out, background 0.35s ease-out, border-color 0.35s ease-out;
+}
+/* Specular — Phase 3C: reduced to 38% height */
+.jelly-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 38%;
+  border-radius: 0 0 50% 50%;
+  background:
+    radial-gradient(ellipse 40% 70% at 25% 15%, oklch(1 0 0 / 22%) 0%, transparent 55%),
+    linear-gradient(180deg, oklch(1 0 0 / 16%) 0%, oklch(1 0 0 / 0%) 100%);
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.3s ease;
+}
+.jelly-btn::after {
+  display: none;
+}
+.jelly-btn-teal {
+  background:
+    radial-gradient(ellipse 60% 50% at 25% 20%, oklch(0.80 0.06 230 / 70%), transparent 55%),
+    radial-gradient(ellipse 80% 70% at 60% 60%, oklch(0.48 0.22 230 / 90%), transparent 80%),
+    linear-gradient(135deg, oklch(0.58 0.16 230 / 85%) 0%, oklch(0.45 0.22 230 / 90%) 100%);
+  color: oklch(0.99 0 0);
+  border: 1px solid oklch(1 0 0 / 14%);
+  border-top-color: oklch(1 0 0 / 20%);
+  box-shadow:
+    inset 0 1px 2px oklch(1 0 0 / 16%),
+    0 2px 6px oklch(0.50 0.20 230 / 20%);
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-btn-teal:hover {
+    box-shadow:
+      inset 0 1px 3px oklch(0.85 0.06 230 / 30%),
+      0 4px 16px oklch(0.50 0.18 230 / 28%),
+      0 0 24px oklch(0.55 0.16 230 / 10%);
+  }
+}
+.jelly-btn-teal:active {
+  box-shadow:
+    inset 0 2px 6px oklch(0.40 0.20 230 / 25%),
+    0 1px 3px oklch(0.50 0.18 230 / 15%);
+}
+.jelly-btn-ghost {
+  background: var(--jelly-surface);
+  color: var(--foreground);
+  border: 1px solid var(--jelly-border);
+  border-top-color: oklch(1 0 0 / 15%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow:
+    inset 0 1px 1px oklch(1 0 0 / 8%),
+    0 1px 4px var(--jelly-shadow-ambient);
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-btn-ghost:hover {
+    background: var(--jelly-surface-hover);
+    box-shadow:
+      inset 0 1px 2px oklch(1 0 0 / 10%),
+      0 2px 10px var(--jelly-shadow-deep);
+  }
+}
+.jelly-btn-ghost:active {
+  box-shadow:
+    inset 0 2px 4px oklch(0 0 0 / 8%),
+    0 0px 0 var(--jelly-shadow-ambient);
+}
+.jelly-btn-amber {
+  background: radial-gradient(ellipse 70% 60% at 30% 25%, oklch(0.92 0.06 65 / 75%), oklch(0.75 0.14 65 / 80%) 50%, oklch(0.65 0.18 65 / 85%) 100%);
+  color: oklch(0.15 0.02 60);
+  border: 1px solid oklch(1 0 0 / 12%);
+  box-shadow:
+    inset 0 1px 2px oklch(1 0 0 / 14%),
+    0 2px 6px oklch(0.70 0.16 65 / 18%);
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-btn-amber:hover {
+    transition: box-shadow 0.3s ease-in, background 0.3s ease-in;
+    box-shadow:
+      inset 0 1px 4px oklch(0.95 0.04 65 / 35%),
+      0 6px 24px oklch(0.72 0.15 65 / 30%),
+      0 0 32px oklch(0.75 0.12 65 / 14%);
+  }
+}
+
+/* ══════════════════════════════════════
+   GLASS PILL — Phase 3C: slimmer, single shadow layer
+   ══════════════════════════════════════ */
+.glass-pill {
+  background: var(--jelly-surface);
+  border: 1px solid var(--jelly-border);
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 1px 3px oklch(0 0 0 / 4%);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.glass-pill:active {
+  transform: scale(0.98);
+}
+
+/* ══════════════════════════════════════
+   JELLY BADGE — Colored translucent tag
+   ══════════════════════════════════════ */
+.jelly-badge-teal {
+  background: oklch(0.55 0.18 230 / 8%);
+  border: 1px solid oklch(0.55 0.18 230 / 12%);
+  color: oklch(0.45 0.16 230);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 3%);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.jelly-badge-teal:active {
+  transform: scale(0.98);
+}
+.dark .jelly-badge-teal {
+  background: oklch(0.62 0.18 230 / 8%);
+  border-color: oklch(0.62 0.18 230 / 12%);
+  color: oklch(0.72 0.14 230);
+}
+.jelly-badge-amber {
+  background: oklch(0.75 0.15 65 / 8%);
+  border: 1px solid oklch(0.75 0.15 65 / 12%);
+  color: oklch(0.55 0.15 65);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 3%);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.jelly-badge-amber:active {
+  transform: scale(0.98);
+}
+
+/* ══════════════════════════════════════
+   JELLY DIVIDER — Organic separator
+   ══════════════════════════════════════ */
+.jelly-divider {
+  position: relative;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, oklch(0.50 0.005 80 / 8%) 20%, oklch(0.50 0.005 80 / 12%) 50%, oklch(0.50 0.005 80 / 8%) 80%, transparent 100%);
+  border-radius: 999px;
+  overflow: visible;
+}
+.jelly-divider::after {
+  content: '';
+  position: absolute;
+  inset: -2px 10% -2px 10%;
+  background: linear-gradient(90deg, transparent 0%, oklch(0.55 0.18 230 / 8%) 30%, oklch(0.75 0.15 65 / 6%) 50%, oklch(0.55 0.18 230 / 8%) 70%, transparent 100%);
+  filter: blur(4px);
+}
+
+/* ══════════════════════════════════════
+   JELLY DOT — Timeline / accent dot
+   ══════════════════════════════════════ */
+.jelly-dot {
+  border-radius: 50%;
+  position: relative;
+}
+.jelly-dot::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: -25%;
+  right: -25%;
+  height: 60%;
+  border-radius: 50%;
+  filter: blur(4px);
+  opacity: 0.5;
+}
+.jelly-dot-teal {
+  background: radial-gradient(circle at 35% 35%, oklch(0.75 0.12 230 / 70%), oklch(0.52 0.18 230 / 80%));
+  box-shadow: 0 0 8px oklch(0.55 0.18 230 / 25%);
+}
+.jelly-dot-teal::after { background: oklch(0.55 0.18 230 / 20%); }
+.jelly-dot-amber {
+  background: radial-gradient(circle at 35% 35%, oklch(0.88 0.10 65 / 70%), oklch(0.72 0.15 65 / 80%));
+  box-shadow: 0 0 8px oklch(0.75 0.15 65 / 25%);
+}
+.jelly-dot-amber::after { background: oklch(0.75 0.15 65 / 20%); }
+
+@keyframes jelly-dot-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 12px oklch(0.55 0.18 230 / 30%); }
+  50% { transform: scale(1.1); box-shadow: 0 0 18px oklch(0.55 0.18 230 / 45%); }
+}
+
+/* ══════════════════════════════════════
+   GUNMETAL TRACK
+   ══════════════════════════════════════ */
+.gunmetal-track {
+  background: linear-gradient(180deg, oklch(0.60 0.008 260 / 60%) 0%, oklch(0.50 0.010 260 / 65%) 50%, oklch(0.56 0.008 260 / 60%) 100%);
+  border: none;
+  box-shadow: 0 0 1px oklch(0.65 0.006 260 / 15%), 0 2px 6px oklch(0 0 0 / 8%);
+}
+
+/* ══════════════════════════════════════
+   JELLY SECTION HEADER
+   ══════════════════════════════════════ */
+.jelly-section-label {
+  font-size: 0.6875rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: oklch(from var(--jelly-teal) l c h / 50%);
+  margin-bottom: 0.75rem;
+}
+.jelly-section-title {
+  font-size: clamp(1.75rem, 3.5vw + 0.5rem, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.12;
+  color: var(--foreground);
+}
+
+/* ══════════════════════════════════════
+   JELLY ICON BOX — Frosted icon container
+   ══════════════════════════════════════ */
+.jelly-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--jelly-border);
+  transition: box-shadow 0.3s ease, background 0.3s ease;
+}
+.jelly-icon-box-teal {
+  background: oklch(0.55 0.18 230 / 6%);
+  border-color: oklch(0.55 0.18 230 / 12%);
+  color: oklch(0.50 0.18 230);
+  box-shadow: 0 1px 4px oklch(0.55 0.18 230 / 8%);
+}
+.dark .jelly-icon-box-teal {
+  color: oklch(0.65 0.18 230);
+}
+.jelly-icon-box-amber {
+  background: oklch(0.75 0.15 65 / 6%);
+  border-color: oklch(0.75 0.15 65 / 12%);
+  color: oklch(0.65 0.15 65);
+  box-shadow: 0 1px 4px oklch(0.75 0.15 65 / 8%);
+}
+
+/* ══════════════════════════════════════
+   JELLY STAT PANEL
+   ══════════════════════════════════════ */
+.jelly-stat-panel {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: var(--jelly-surface);
+  border: 1px solid var(--jelly-border);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 1px 4px var(--jelly-shadow-ambient);
+}
+
+/* ══════════════════════════════════════
+   JELLY CAUSTIC — Animated glow beneath elements
+   ══════════════════════════════════════ */
+.jelly-caustic {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(16px);
+  opacity: 0;
+  transition: opacity 0.6s ease-out;
+  pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .group:hover > .jelly-caustic {
+    opacity: 0.25;
+    transition: opacity 0.3s ease-in;
+  }
+}
+.jelly-caustic-teal {
+  background: radial-gradient(ellipse, oklch(0.55 0.18 230 / 45%) 0%, transparent 70%);
+}
+.jelly-caustic-amber {
+  background: radial-gradient(ellipse, oklch(0.75 0.15 65 / 45%) 0%, transparent 70%);
+}
+
+/* ══════════════════════════════════════
+   JELLY GLASS NAVBAR
+   ══════════════════════════════════════ */
+.jelly-navbar {
+  background: var(--jelly-surface);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid var(--jelly-border);
+  box-shadow:
+    0 1px 0 var(--jelly-highlight),
+    0 4px 16px var(--jelly-shadow-ambient);
+  border-radius: 1.5rem;
+}
+.dark .jelly-navbar {
+  background: oklch(0.16 0.008 60 / 60%);
+  border-color: oklch(1 0 0 / 6%);
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 4%),
+    0 4px 16px oklch(0 0 0 / 12%);
+}
+
+/* ══════════════════════════════════════
+   JELLY MOBILE OVERLAY
+   ══════════════════════════════════════ */
+.jelly-mobile-overlay {
+  background: oklch(0.96 0.004 80 / 92%);
+  backdrop-filter: blur(40px) saturate(1.4);
+  -webkit-backdrop-filter: blur(40px) saturate(1.4);
+}
+.dark .jelly-mobile-overlay {
+  background: oklch(0.14 0.008 60 / 92%);
+}
+
+/* ══════════════════════════════════════
+   SCROLLBAR
+   ══════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: oklch(0.50 0.005 80 / 15%); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(0.40 0.005 80 / 25%); }
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+section[id] { scroll-margin-top: 5rem; }
+
+/* Accessible focus ring */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+::selection {
+  background: oklch(0.55 0.18 230 / 15%);
+  color: oklch(0.12 0.015 60);
+}
+.dark ::selection {
+  background: oklch(0.62 0.18 230 / 20%);
+  color: oklch(0.96 0.004 80);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   JELLY MODE ON — Phase 3C: Spring-derived transferable jelly
+   Applied when html.jelly-mode is active.
+   
+   Transfer model from TypeGPU jelly-switch/slider:
+   - ζ = 0.85 (underdamped, 1.5-2 visible oscillations)
+   - 6.5% max overshoot, 600ms settle
+   - Fresnel edge: differential border brightness
+   - Subsurface scatter: directional inset shadow
+   - Specular shift: gradient position responds to deformation
+   - Transform-origin: center 60% for localized feel
+   - Volume-preserving squash/stretch
+   ══════════════════════════════════════════════════════════════ */
+
+/* Cards: 3D glass/gel with Fresnel edge + subsurface scatter */
+.jelly-mode .jelly-card {
+  background: oklch(1 0 0 / 6%);
+  backdrop-filter: blur(16px) saturate(1.35);
+  -webkit-backdrop-filter: blur(16px) saturate(1.35);
+  /* Fresnel edge: top border brighter, bottom darker */
+  border: 1.5px solid oklch(1 0 0 / 14%);
+  border-top-color: oklch(1 0 0 / 32%);
+  border-bottom-color: oklch(0 0 0 / 10%);
+  /* Asymmetric border-radius: organic deformation cue */
+  border-radius: 1rem 0.9rem 1rem 0.95rem;
+  box-shadow:
+    /* Subsurface scatter: top-left internal glow */
+    inset 2px 3px 8px oklch(1 0 0 / 22%),
+    inset -2px 0 6px oklch(1 0 0 / 6%),
+    inset 0 -3px 6px oklch(0 0 0 / 10%),
+    /* Contact shadow */
+    0 3px 0 oklch(0 0 0 / 5%),
+    0 1px 0 oklch(1 0 0 / 8%),
+    0 6px 24px -4px oklch(0 0 0 / 10%);
+  transition:
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    transform 0.6s cubic-bezier(0.22, 1.2, 0.36, 1);
+  transform-origin: center 60%;
+}
+/* Specular highlight: shifted to top-left for directional light */
+.jelly-mode .jelly-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(170deg, oklch(1 0 0 / 22%) 0%, oklch(1 0 0 / 6%) 20%, transparent 45%),
+    radial-gradient(ellipse 35% 50% at 8% 45%, oklch(1 0 0 / 6%) 0%, transparent 55%);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-mode .jelly-card:hover {
+    animation: jelly-spring-settle 0.6s ease-out;
+    box-shadow:
+      /* Subsurface scatter intensifies on hover */
+      inset 3px 4px 10px oklch(1 0 0 / 28%),
+      inset -2px 0 8px oklch(1 0 0 / 8%),
+      inset 0 -4px 8px oklch(0 0 0 / 14%),
+      0 4px 0 oklch(0 0 0 / 7%),
+      0 2px 0 oklch(1 0 0 / 10%),
+      0 10px 32px -4px oklch(0 0 0 / 14%);
+  }
+}
+
+/* Caustic glow subtly visible in jelly mode */
+.jelly-mode .jelly-caustic {
+  opacity: 0.08;
+  animation: jelly-glow-pulse 4s ease-in-out infinite;
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-mode .group:hover > .jelly-caustic {
+    opacity: 0.35;
+  }
+}
+
+/* Enhanced navbar with Fresnel edge */
+.jelly-mode .jelly-navbar {
+  background: oklch(0.96 0.005 80 / 70%) !important;
+  backdrop-filter: blur(16px) saturate(1.25) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.25) !important;
+  border: 1.5px solid oklch(0 0 0 / 6%) !important;
+  border-top-color: oklch(1 0 0 / 30%) !important;
+  border-bottom-color: oklch(0 0 0 / 6%) !important;
+  box-shadow:
+    inset 0 1px 3px oklch(1 0 0 / 20%),
+    inset 0 -1px 2px oklch(0 0 0 / 4%),
+    0 2px 0 oklch(0 0 0 / 3%),
+    0 4px 16px -4px oklch(0 0 0 / 8%) !important;
+  border-radius: 16px;
+}
+
+/* Section titles: very subtle float only */
+.jelly-mode .jelly-section-title {
+  animation: jelly-float 14s ease-in-out infinite;
+  animation-delay: -3s;
+}
+
+/* Icon boxes: gel depth */
+.jelly-mode .jelly-icon-box {
+  border: 1.5px solid oklch(1 0 0 / 16%) !important;
+  border-top-color: oklch(1 0 0 / 28%) !important;
+  box-shadow:
+    inset 0 2px 5px oklch(1 0 0 / 22%),
+    inset 0 -2px 3px oklch(0 0 0 / 8%),
+    0 2px 0 oklch(0 0 0 / 5%),
+    0 4px 14px -4px oklch(0 0 0 / 8%) !important;
+  animation: jelly-pulse 5s ease-in-out infinite;
+}
+
+/* Stat panels: gel depth */
+.jelly-mode .jelly-stat-panel {
+  border: 1.5px solid oklch(1 0 0 / 14%) !important;
+  border-top-color: oklch(1 0 0 / 24%) !important;
+  box-shadow:
+    inset 0 2px 5px oklch(1 0 0 / 18%),
+    inset 0 -2px 3px oklch(0 0 0 / 7%),
+    0 2px 0 oklch(0 0 0 / 4%),
+    0 4px 14px -4px oklch(0 0 0 / 7%) !important;
+  animation: jelly-bounce-in 0.8s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+
+/* Enhanced body background with animated caustics */
+.jelly-mode body {
+  background-image:
+    radial-gradient(ellipse 100% 60% at 0% 0%, oklch(0.55 0.18 230 / 8%) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 50% at 100% 100%, oklch(0.75 0.15 65 / 6%) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 50%, oklch(0.50 0.005 80 / 4%) 0%, transparent 60%);
+  background-size: 200% 200%, 200% 200%, 200% 200%;
+  animation: caustic-shimmer 15s ease-in-out infinite;
+}
+.jelly-mode.dark body {
+  background-image:
+    radial-gradient(ellipse 100% 60% at 0% 0%, oklch(0.55 0.18 230 / 12%) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 50% at 100% 100%, oklch(0.75 0.15 65 / 8%) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 50%, oklch(0.30 0.005 80 / 6%) 0%, transparent 60%);
+  background-size: 200% 200%, 200% 200%, 200% 200%;
+  animation: caustic-shimmer 15s ease-in-out infinite;
+}
+
+/* Buttons: spring-derived active squash with volume preservation */
+.jelly-mode button:active:not(.no-jelly) {
+  transform: scale(1.065, 0.935) !important;
+  transition: transform 0.08s ease-out !important;
+}
+
+/* Material surfaces: enhanced Fresnel + scatter */
+.jelly-mode .jelly-material-teal {
+  border: 1.5px solid oklch(0.55 0.18 230 / 20%) !important;
+  border-top-color: oklch(1 0 0 / 25%) !important;
+  box-shadow:
+    inset 2px 3px 8px oklch(1 0 0 / 22%),
+    inset 0 -3px 6px oklch(0 0 0 / 14%),
+    0 3px 0 oklch(0.55 0.18 230 / 8%),
+    0 5px 20px oklch(0.55 0.18 230 / 22%),
+    0 0 30px oklch(0.55 0.18 230 / 10%) !important;
+}
+.jelly-mode .jelly-material-amber {
+  border: 1.5px solid oklch(0.75 0.15 65 / 20%) !important;
+  border-top-color: oklch(1 0 0 / 25%) !important;
+  box-shadow:
+    inset 2px 3px 8px oklch(1 0 0 / 22%),
+    inset 0 -3px 6px oklch(0 0 0 / 14%),
+    0 3px 0 oklch(0.75 0.15 65 / 8%),
+    0 5px 20px oklch(0.75 0.15 65 / 22%),
+    0 0 30px oklch(0.75 0.15 65 / 10%) !important;
+}
+
+/* Scrollbar: jelly color */
+.jelly-mode ::-webkit-scrollbar-thumb {
+  background: oklch(0.55 0.18 230 / 25%);
+  border-radius: 3px;
+}
+.jelly-mode ::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.55 0.18 230 / 40%);
+}
+
+/* Buttons: spring-settle on hover (fine pointer only) */
+@media (hover: hover) and (pointer: fine) {
+  .jelly-mode button:hover:not(.no-jelly),
+  .jelly-mode a:hover:not(.no-jelly) {
+    animation: jelly-spring-settle 0.6s ease-out;
+  }
+}
+
+/* Cards: spring-settle on hover */
+@media (hover: hover) and (pointer: fine) {
+  .jelly-mode .jelly-card:hover {
+    animation: jelly-spring-settle 0.6s ease-out !important;
+  }
+}
+
+/* Dark mode jelly card adjustments */
+.jelly-mode.dark .jelly-card {
+  background: oklch(1 0 0 / 4%);
+  border: 1.5px solid oklch(1 0 0 / 10%);
+  border-top-color: oklch(1 0 0 / 20%);
+  border-bottom-color: oklch(0 0 0 / 16%);
+  box-shadow:
+    inset 2px 3px 8px oklch(1 0 0 / 14%),
+    inset -2px 0 6px oklch(1 0 0 / 4%),
+    inset 0 -3px 6px oklch(0 0 0 / 18%),
+    0 3px 0 oklch(0 0 0 / 10%),
+    0 1px 0 oklch(1 0 0 / 4%),
+    0 6px 24px -4px oklch(0 0 0 / 18%);
+}
+/* Dark mode jelly navbar */
+.jelly-mode.dark .jelly-navbar {
+  background: oklch(0.12 0.01 230 / 65%) !important;
+  backdrop-filter: blur(16px) saturate(1.25) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.25) !important;
+  border: 1.5px solid oklch(1 0 0 / 6%) !important;
+  border-top-color: oklch(1 0 0 / 12%) !important;
+  border-bottom-color: oklch(0 0 0 / 12%) !important;
+  box-shadow:
+    inset 0 1px 3px oklch(1 0 0 / 8%),
+    inset 0 -1px 2px oklch(0 0 0 / 10%),
+    0 2px 0 oklch(0 0 0 / 8%),
+    0 4px 16px -4px oklch(0 0 0 / 14%) !important;
+  border-radius: 16px;
+}
+
+/* ══════════════════════════════════════
+   JELLY MODE ON — Buttons: Fresnel + spring
+   ══════════════════════════════════════ */
+.jelly-mode .jelly-btn {
+  border: 1.5px solid oklch(1 0 0 / 14%) !important;
+  border-top-color: oklch(1 0 0 / 26%) !important;
+  border-bottom-color: oklch(0 0 0 / 8%) !important;
+  transform-origin: center 60%;
+  box-shadow:
+    inset 0 2px 5px oklch(1 0 0 / 20%),
+    inset 0 -2px 4px oklch(0 0 0 / 10%),
+    0 2px 1px oklch(0 0 0 / 5%),
+    0 4px 14px -4px oklch(0 0 0 / 10%) !important;
+}
+/* Specular: slightly more intense in jelly mode */
+.jelly-mode .jelly-btn::before {
+  height: 42%;
+  background:
+    radial-gradient(ellipse 35% 65% at 22% 12%, oklch(1 0 0 / 32%) 0%, transparent 50%),
+    linear-gradient(180deg, oklch(1 0 0 / 22%) 0%, oklch(1 0 0 / 0%) 100%) !important;
+}
+.jelly-mode .jelly-btn-teal {
+  background:
+    radial-gradient(ellipse 55% 45% at 22% 18%, oklch(0.82 0.05 230 / 75%), transparent 50%),
+    radial-gradient(ellipse 75% 65% at 58% 58%, oklch(0.46 0.24 230 / 92%), transparent 75%),
+    linear-gradient(140deg, oklch(0.56 0.18 230 / 88%) 0%, oklch(0.42 0.24 230 / 92%) 100%) !important;
+  box-shadow:
+    inset 2px 2px 6px oklch(1 0 0 / 22%),
+    inset 0 -2px 4px oklch(0.30 0.22 230 / 14%),
+    0 2px 1px oklch(0.35 0.20 230 / 8%),
+    0 5px 18px oklch(0.50 0.20 230 / 22%),
+    0 0 16px oklch(0.55 0.18 230 / 8%) !important;
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-mode .jelly-btn-teal:hover {
+    box-shadow:
+      inset 3px 3px 8px oklch(0.88 0.04 230 / 40%),
+      inset -1px -2px 6px oklch(0.30 0.22 230 / 18%),
+      0 3px 2px oklch(0.35 0.20 230 / 7%),
+      0 8px 28px oklch(0.50 0.18 230 / 30%),
+      0 0 30px oklch(0.55 0.16 230 / 12%) !important;
+  }
+}
+.jelly-mode .jelly-btn-teal:active {
+  box-shadow:
+    inset 0 3px 8px oklch(0.35 0.22 230 / 28%),
+    inset 0 -1px 2px oklch(1 0 0 / 8%),
+    0 1px 0 oklch(0.35 0.20 230 / 6%),
+    0 2px 6px oklch(0.50 0.18 230 / 14%) !important;
+}
+.jelly-mode .jelly-btn-ghost {
+  box-shadow:
+    inset 0 2px 5px oklch(1 0 0 / 14%),
+    inset 0 -2px 4px oklch(0 0 0 / 7%),
+    0 2px 1px oklch(0 0 0 / 4%),
+    0 4px 14px -4px oklch(0 0 0 / 8%) !important;
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-mode .jelly-btn-ghost:hover {
+    box-shadow:
+      inset 2px 3px 6px oklch(1 0 0 / 18%),
+      inset -1px -2px 5px oklch(0 0 0 / 8%),
+      0 3px 2px oklch(0 0 0 / 4%),
+      0 6px 20px -4px oklch(0 0 0 / 10%) !important;
+  }
+}
+.jelly-mode .jelly-btn-ghost:active {
+  box-shadow:
+    inset 0 3px 8px oklch(0 0 0 / 10%),
+    inset 0 -1px 2px oklch(1 0 0 / 5%),
+    0 1px 0 oklch(0 0 0 / 3%),
+    0 2px 4px oklch(0 0 0 / 6%) !important;
+}
+
+/* ══════════════════════════════════════
+   JELLY MODE ON — Secondary elements
+   ══════════════════════════════════════ */
+
+/* Glass pills: Fresnel edge + spring */
+.jelly-mode .glass-pill {
+  border: 1px solid oklch(1 0 0 / 10%);
+  border-top-color: oklch(1 0 0 / 18%);
+  border-bottom-color: oklch(0 0 0 / 4%);
+  box-shadow:
+    inset 1px 1.5px 3px oklch(1 0 0 / 14%),
+    inset 0 -1px 2px oklch(0 0 0 / 4%),
+    0 1px 0 oklch(0 0 0 / 3%),
+    0 2px 5px oklch(0 0 0 / 5%);
+  transform-origin: center 60%;
+}
+.jelly-mode .glass-pill:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-mode .glass-pill:hover {
+    animation: jelly-pill-spring 0.5s ease-out;
+  }
+}
+
+/* Jelly badges: Fresnel edge */
+.jelly-mode .jelly-badge-teal {
+  border: 1px solid oklch(0.55 0.18 230 / 14%);
+  border-top-color: oklch(0.55 0.18 230 / 24%);
+  box-shadow:
+    inset 1px 1.5px 3px oklch(0.55 0.18 230 / 12%),
+    inset 0 -1px 1px oklch(0 0 0 / 4%),
+    0 1px 0 oklch(0.55 0.18 230 / 4%),
+    0 2px 5px oklch(0.55 0.18 230 / 6%);
+}
+.jelly-mode .jelly-badge-teal:active {
+  transform: scale(0.97);
+}
+.jelly-mode .jelly-badge-amber {
+  border: 1px solid oklch(0.75 0.15 65 / 14%);
+  border-top-color: oklch(0.75 0.15 65 / 24%);
+  box-shadow:
+    inset 1px 1.5px 3px oklch(0.75 0.15 65 / 12%),
+    inset 0 -1px 1px oklch(0 0 0 / 4%),
+    0 1px 0 oklch(0.75 0.15 65 / 4%),
+    0 2px 5px oklch(0.75 0.15 65 / 6%);
+}
+.jelly-mode .jelly-badge-amber:active {
+  transform: scale(0.97);
+}
+
+/* Standalone interactive elements */
+.jelly-interactive {
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-interactive:hover {
+    transform: scale(1.03);
+    box-shadow:
+      inset 0 2px 5px oklch(1 0 0 / 12%),
+      inset 0 -1px 3px oklch(0 0 0 / 5%),
+      0 2px 8px oklch(0 0 0 / 8%);
+  }
+}
+.jelly-interactive:active {
+  transform: scale(0.96);
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-mode .jelly-interactive:hover {
+    animation: jelly-pill-spring 0.5s ease-out;
+    box-shadow:
+      inset 1px 2px 5px oklch(1 0 0 / 16%),
+      inset 0 -1.5px 3px oklch(0 0 0 / 6%),
+      0 2px 0 oklch(0 0 0 / 4%),
+      0 3px 10px oklch(0 0 0 / 7%);
+  }
+}
+.jelly-mode .jelly-interactive:active {
+  transform: scale(0.935, 1.065) !important;
+  transition: transform 0.08s ease-out !important;
+}
+
+/* Social icon in jelly mode */
+.jelly-social-icon {
+  box-shadow:
+    inset 0 1px 2px oklch(1 0 0 / 6%),
+    0 1px 3px oklch(0 0 0 / 4%);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.jelly-social-icon:active {
+  transform: scale(0.96);
+}
+.jelly-mode .jelly-social-icon {
+  background: var(--jelly-surface);
+  border: 1px solid oklch(1 0 0 / 10%);
+  border-top-color: oklch(1 0 0 / 18%);
+  box-shadow:
+    inset 1px 1.5px 3px oklch(1 0 0 / 12%),
+    inset 0 -1px 2px oklch(0 0 0 / 4%),
+    0 1px 0 oklch(0 0 0 / 3%),
+    0 2px 5px oklch(0 0 0 / 5%);
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-mode .jelly-social-icon:hover {
+    animation: jelly-pill-spring 0.5s ease-out;
+    box-shadow:
+      inset 2px 2px 5px oklch(1 0 0 / 16%),
+      inset -1px -1px 3px oklch(0 0 0 / 6%),
+      0 2px 0 oklch(0 0 0 / 4%),
+      0 3px 10px oklch(0 0 0 / 7%);
+  }
+}
+.jelly-mode .jelly-social-icon:active {
+  transform: scale(0.935, 1.065) !important;
+  transition: transform 0.08s ease-out !important;
+}
+
+/* Logo badge */
+.jelly-logo-badge {
+  background: linear-gradient(145deg, oklch(0.65 0.16 230 / 70%), oklch(0.50 0.22 230 / 75%));
+  box-shadow:
+    inset 0 1px 3px oklch(1 0 0 / 18%),
+    0 0 1px oklch(1 0 0 / 15%),
+    0 3px 8px oklch(0.55 0.20 230 / 20%);
+  transition: box-shadow 0.3s ease;
+}
+.jelly-mode .jelly-logo-badge {
+  border: 1px solid oklch(1 0 0 / 12%);
+  border-top-color: oklch(1 0 0 / 24%);
+  box-shadow:
+    inset 2px 2px 5px oklch(1 0 0 / 22%),
+    inset 0 -1px 3px oklch(0 0 0 / 8%),
+    0 0 1px oklch(1 0 0 / 12%),
+    0 3px 8px oklch(0.55 0.20 230 / 18%);
+}
+
+/* Nav links */
+.jelly-nav-link {
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-nav-link:hover {
+    box-shadow: 0 1px 4px oklch(0 0 0 / 4%);
+  }
+}
+.jelly-mode .jelly-nav-link {
+  border-radius: 9999px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-mode .jelly-nav-link:hover {
+    box-shadow:
+      inset 0 1px 2px oklch(1 0 0 / 8%),
+      0 2px 5px oklch(0 0 0 / 5%);
+  }
+}
+
+/* Skills gel orb */
+.jelly-gel-orb {
+  box-shadow:
+    inset 0 1px 2px oklch(1 0 0 / 10%),
+    0 0 1px oklch(1 0 0 / 10%),
+    0 2px 6px var(--orb-glow, oklch(0 0 0 / 8%));
+  transition: box-shadow 0.3s ease;
+}
+.jelly-mode .jelly-gel-orb {
+  border: 1px solid oklch(1 0 0 / 10%);
+  border-top-color: oklch(1 0 0 / 20%);
+  box-shadow:
+    inset 1px 2px 5px oklch(1 0 0 / 18%),
+    inset 0 -1px 3px oklch(0 0 0 / 7%),
+    0 0 1px oklch(1 0 0 / 8%),
+    0 2px 8px var(--orb-glow, oklch(0 0 0 / 8%));
+}
+
+/* Stat counter number */
+.jelly-stat-number {
+  font-size: clamp(1.5rem, 3vw, 1.875rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   KEYFRAMES — Phase 3C: Spring-derived from damped harmonic oscillator
+   ζ = 0.85, ω_n = 2π/0.6s, volume-preserving (scaleX * scaleY ≈ 1.0)
+   ══════════════════════════════════════════════════════════════ */
+
+/* Caustic shimmer for background */
+@keyframes caustic-shimmer {
+  0% { background-position: 0% 0%, 100% 100%, 50% 50%; }
+  33% { background-position: 50% 30%, 30% 70%, 80% 20%; }
+  66% { background-position: 100% 60%, 0% 40%, 30% 80%; }
+  100% { background-position: 0% 0%, 100% 100%, 50% 50%; }
+}
+
+/* Spring settle — ζ=0.85 underdamped: 1.5-2 visible oscillations, 6.5% overshoot
+   Derived from x(t) = A * e^(-ζωt) * cos(ωd*t + φ)
+   Volume-preserving: scaleX * scaleY ≈ 1.0 at every keyframe */
+@keyframes jelly-spring-settle {
+  0%   { transform: scale(1, 1); }
+  12%  { transform: scale(0.935, 1.065); }
+  28%  { transform: scale(1.04, 0.96); }
+  44%  { transform: scale(0.985, 1.015); }
+  58%  { transform: scale(1.008, 0.992); }
+  72%  { transform: scale(0.998, 1.002); }
+  100% { transform: scale(1, 1); }
+}
+
+/* Pill spring — gentler amplitude, same ζ=0.85 */
+@keyframes jelly-pill-spring {
+  0%   { transform: scale(1, 1); }
+  15%  { transform: scale(0.955, 1.045); }
+  32%  { transform: scale(1.025, 0.975); }
+  48%  { transform: scale(0.99, 1.01); }
+  64%  { transform: scale(1.005, 0.995); }
+  100% { transform: scale(1, 1); }
+}
+
+/* Bounce-in for elements entering viewport */
+@keyframes jelly-bounce-in {
+  0%   { transform: scale(0.3, 0.3); opacity: 0; }
+  20%  { transform: scale(1.065, 0.935); opacity: 1; }
+  40%  { transform: scale(0.96, 1.04); }
+  58%  { transform: scale(1.015, 0.985); }
+  76%  { transform: scale(0.995, 1.005); }
+  100% { transform: scale(1, 1); }
+}
+
+/* Float — subtle vertical drift */
+@keyframes jelly-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* Glow pulse */
+@keyframes jelly-glow-pulse {
+  0%, 100% { opacity: 0.08; }
+  50% { opacity: 0.16; }
+}
+
+/* Pulse for icon boxes */
+@keyframes jelly-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+/* ══════════════════════════════════════
+   PHASE 4A — ANIMATION UTILITY CLASSES
+   Behavior goal: reusable motion vocabulary for section components.
+   OFF state: no animation applied. Classes are inert.
+   ON state (.jelly-mode): animations activate.
+   All animations use only transform + opacity (compositor-only).
+   All gated behind .jelly-mode selector.
+   ══════════════════════════════════════ */
+
+/* Pulse — slow scale oscillation for decorative elements (icon boxes, stat panels).
+   Behavior: element breathes gently, suggesting the surface is alive.
+   Amplitude: ±2% scale. Cycle: 5s. Compositor-only. */
+.animate-jelly-pulse {
+  /* Inert in OFF mode — no animation */
+}
+.jelly-mode .animate-jelly-pulse {
+  animation: jelly-pulse 5s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Float — subtle vertical drift for section titles and headings.
+   Behavior: element drifts up 3px and back, suggesting organic suspension.
+   Amplitude: 3px vertical. Cycle: 14s. Compositor-only. */
+.animate-jelly-float {
+  /* Inert in OFF mode */
+}
+.jelly-mode .animate-jelly-float {
+  animation: jelly-float 14s ease-in-out infinite;
+  animation-delay: -3s;
+  will-change: transform;
+}
+
+/* Glow — opacity oscillation for ambient caustic/glow spots.
+   Behavior: glow element fades between 8% and 16% opacity.
+   Cycle: 4s. Compositor-only. */
+.animate-jelly-glow {
+  opacity: 0;
+  /* Inert in OFF mode — invisible */
+}
+.jelly-mode .animate-jelly-glow {
+  opacity: 0.08;
+  animation: jelly-glow-pulse 4s ease-in-out infinite;
+  will-change: opacity;
+}
+
+/* Bounce-in — viewport-entry animation with squash-stretch overshoot.
+   Behavior: element scales from 0.3 to 1.0 with spring-derived oscillation.
+   Used by GSAP ScrollTrigger callbacks to add this class on viewport entry.
+   Duration: 0.7s. Compositor-only. */
+.animate-jelly-bounce-in {
+  /* Inert in OFF mode */
+}
+.jelly-mode .animate-jelly-bounce-in {
+  animation: jelly-bounce-in 0.7s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+/* ══════════════════════════════════════
+   PHASE 4A — SPLINE PRESENTATION BEHAVIORS
+   Behavior goal: integrate the Spline 3D canvas seamlessly
+   into the page surface language.
+   These are global rules applied to the Spline runtime elements.
+   ══════════════════════════════════════ */
+
+/* Spline canvas transparency — force transparent background
+   so the 3D scene composites over the page gradient. */
+.spline-container canvas {
+  background: transparent !important;
+}
+
+/* Spline edge masking — feather the rectangular canvas edges
+   with a radial gradient mask so the scene blends organically. */
+.spline-container {
+  mask-image: radial-gradient(ellipse 85% 90% at 55% 50%, black 60%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 90% at 55% 50%, black 60%, transparent 100%);
+}
+
+/* Spline blend mode — in dark mode, use lighten blend
+   so the 3D scene integrates with the dark background
+   instead of looking pasted-on. Light mode uses normal. */
+.dark .spline-container {
+  mix-blend-mode: lighten;
+}
+
+/* Spline watermark suppression — hide the "Built with Spline" branding.
+   Targets the Spline runtime's watermark element. */
+.spline-container [data-name="watermark"],
+.spline-container a[href*="spline.design"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ══════════════════════════════════════
+   PHASE 4A — SCROLL DEFORMATION TARGET
+   Behavior goal: prepare elements for GSAP ScrollTrigger-driven
+   transform animations without layout thrashing.
+   Applied to any element that will receive scroll-driven deformation.
+   ══════════════════════════════════════ */
+.jelly-scroll-deform {
+  will-change: transform;
+  transform-origin: center center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* ══════════════════════════════════════
+   HERO SPLINE ENTRANCE
+   ══════════════════════════════════════ */
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.85) rotate(-3deg); }
+  to { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+/* ══════════════════════════════════════
+   METABALL BLOB ANIMATIONS
+   ══════════════════════════════════════ */
+@keyframes metaball-drift-1 {
+  0% { transform: translate(5vw, 10vh) scale(1) rotate(0deg); }
+  20% { transform: translate(35vw, 25vh) scale(1.15) rotate(15deg); }
+  40% { transform: translate(60vw, 10vh) scale(0.9) rotate(-10deg); }
+  60% { transform: translate(40vw, 55vh) scale(1.1) rotate(20deg); }
+  80% { transform: translate(15vw, 40vh) scale(0.95) rotate(-5deg); }
+  100% { transform: translate(5vw, 10vh) scale(1) rotate(0deg); }
+}
+@keyframes metaball-drift-2 {
+  0% { transform: translate(70vw, 60vh) scale(1) rotate(0deg); }
+  20% { transform: translate(45vw, 35vh) scale(1.1) rotate(-12deg); }
+  40% { transform: translate(20vw, 65vh) scale(0.92) rotate(8deg); }
+  60% { transform: translate(55vw, 20vh) scale(1.08) rotate(-18deg); }
+  80% { transform: translate(75vw, 45vh) scale(0.96) rotate(5deg); }
+  100% { transform: translate(70vw, 60vh) scale(1) rotate(0deg); }
+}
+@keyframes metaball-drift-3 {
+  0% { transform: translate(40vw, 70vh) scale(1) rotate(0deg); }
+  25% { transform: translate(65vw, 45vh) scale(1.12) rotate(10deg); }
+  50% { transform: translate(30vw, 20vh) scale(0.88) rotate(-15deg); }
+  75% { transform: translate(55vw, 75vh) scale(1.05) rotate(8deg); }
+  100% { transform: translate(40vw, 70vh) scale(1) rotate(0deg); }
+}
+@keyframes metaball-drift-4 {
+  0% { transform: translate(80vw, 15vh) scale(1) rotate(0deg); }
+  30% { transform: translate(25vw, 50vh) scale(1.08) rotate(-8deg); }
+  60% { transform: translate(50vw, 80vh) scale(0.94) rotate(12deg); }
+  100% { transform: translate(80vw, 15vh) scale(1) rotate(0deg); }
+}
+
+.jelly-metaball-1 { animation: metaball-drift-1 30s ease-in-out infinite; will-change: transform; }
+.jelly-metaball-2 { animation: metaball-drift-2 25s ease-in-out infinite; will-change: transform; }
+.jelly-metaball-3 { animation: metaball-drift-3 20s ease-in-out infinite; will-change: transform; }
+.jelly-metaball-4 { animation: metaball-drift-4 28s ease-in-out infinite; will-change: transform; }
+
+/* ══════════════════════════════════════
+   PHASE 2A — LAYER B CSS JELLY ATMOSPHERE
+   Additive classes gated by .jelly-mode ancestor.
+   No WebGPU, no canvas, no TypeGPU.
+   ══════════════════════════════════════ */
+
+/* Section background — subtle caustic gradient overlay per section */
+.jelly-section-bg {
+  /* Inert in standard mode — no visual change */
+}
+.jelly-mode .jelly-section-bg {
+  position: relative;
+}
+.jelly-mode .jelly-section-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 20%, var(--jelly-caustic-teal) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 35% at 85% 80%, var(--jelly-caustic-amber) 0%, transparent 60%);
+}
+.jelly-mode.dark .jelly-section-bg::after {
+  opacity: 0.35;
+}
+
+/* Skill bar jelly fill — translucent gradient with inner glow */
+.jelly-mode .jelly-skill-bar {
+  background: linear-gradient(
+    90deg,
+    oklch(from var(--jelly-teal) l c h / 50%) 0%,
+    oklch(from var(--jelly-teal) l c h / 75%) 60%,
+    oklch(from var(--jelly-amber) l c h / 60%) 100%
+  );
+  box-shadow:
+    inset 0 1px 2px oklch(1 0 0 / 25%),
+    inset 0 -1px 1px oklch(0 0 0 / 8%),
+    0 0 6px oklch(from var(--jelly-teal) l c h / 15%);
+  border-radius: 999px;
+}
+
+/* Jelly pill — wobble on hover for company pills and tags */
+.jelly-mode .jelly-tag {
+  background: oklch(from var(--primary) l c h / 8%);
+  border: 1px solid oklch(from var(--primary) l c h / 14%);
+  border-top-color: oklch(from var(--primary) l c h / 22%);
+  box-shadow:
+    inset 0 1px 2px oklch(1 0 0 / 10%),
+    0 1px 3px oklch(0 0 0 / 4%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .jelly-mode .jelly-tag:hover {
+    animation: jelly-pill-spring 0.5s ease-out;
+  }
+}
+
+/* Mode transition — smooth cross-fade when toggling jelly mode */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease, background-image 0.3s ease;
+}
+
+/* Mobile blur reduction for jelly cards */
+@media (hover: none) {
+  .jelly-mode .jelly-card {
+    backdrop-filter: blur(4px) saturate(1.15);
+    -webkit-backdrop-filter: blur(4px) saturate(1.15);
+  }
+}
+
+/* ══════════════════════════════════════
+   REDUCED MOTION — Respect user preferences
+   ══════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .jelly-mode section { will-change: auto; transition: none; }
+  .jelly-mode .jelly-section-title { animation: none; }
+  .jelly-mode .jelly-icon-box { animation: none; }
+  .jelly-metaball-1, .jelly-metaball-2, .jelly-metaball-3,
+  .jelly-metaball-4 { animation: none; }
+  /* Phase 4A utilities */
+  .jelly-mode .animate-jelly-pulse,
+  .jelly-mode .animate-jelly-float,
+  .jelly-mode .animate-jelly-glow,
+  .jelly-mode .animate-jelly-bounce-in { animation: none !important; }
+  /* Phase 2A: disable jelly section background caustics */
+  .jelly-mode .jelly-section-bg::after { display: none !important; }
+  .jelly-mode .jelly-tag { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  .jelly-mode .jelly-skill-bar { box-shadow: none !important; }
 }

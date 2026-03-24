@@ -6,20 +6,43 @@
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>Hardik Lukhi — Engineering Leader</title>
-    <meta name="description" content="Portfolio of Hardik Lukhi — Project Manager & Senior Mechanical Engineer specializing in hardware sustainment, test engineering, and cross-functional program leadership at Meta." />
+    <title>Hardik Lukhi — Project Manager | Senior Mechanical Engineer</title>
+    <meta name="description" content="Hardware Engineer, Project Manager, and Test Engineering leader who owns Meta's end-to-end EMG wearable sustainment pipeline. Eight years spanning six product generations across consumer electronics and regulated medical devices, with dual Master's degrees and expertise in NPI, DfX, SPC, and cross-functional program leadership." />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Hardik Lukhi — Project Manager | Senior Mechanical Engineer" />
+    <meta property="og:description" content="Hardware Engineer, Project Manager, and Test Engineering leader who owns Meta's end-to-end EMG wearable sustainment pipeline. Eight years spanning six product generations across consumer electronics and regulated medical devices." />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Hardik Lukhi — Project Manager | Senior Mechanical Engineer" />
+    <meta name="twitter:description" content="Hardware Engineer, Project Manager, and Test Engineering leader who owns Meta's end-to-end EMG wearable sustainment pipeline." />
+
+    <!-- Google Fonts: DM Sans + JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   </head>
 
   <body>
+    <!-- Flash prevention: apply stored theme before React mounts -->
+    <script>
+      (function(){
+        try {
+          var t = localStorage.getItem('theme');
+          if (t === 'dark') document.documentElement.classList.add('dark');
+          else document.documentElement.classList.remove('dark');
+          // Jelly mode flash prevention: apply stored jelly state before React mounts
+          var j = localStorage.getItem('jelly-mode');
+          if (j === 'true') document.documentElement.classList.add('jelly-mode');
+        } catch(e) {
+          document.documentElement.classList.remove('dark');
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script
-      defer
-      src="%VITE_ANALYTICS_ENDPOINT%/umami"
-      data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"></script>
   </body>
 
 </html>

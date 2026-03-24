@@ -1,26 +1,60 @@
-/*
- * Navbar — "Quiet Authority" design
- * Minimal, transparent, with theme + jelly toggles.
- * Backdrop blur on scroll. Instrument Serif wordmark.
+/**
+ * Navbar — Minimal, clean navigation bar.
+ * Logo text badge, section anchor links, jelly mode toggle, theme toggle.
+ * Sticky with backdrop blur on scroll.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { Sun, Moon, Menu, X, Droplet } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useJellyMode } from "@/contexts/JellyModeContext";
-import { Sun, Moon, Menu, X } from "lucide-react";
 
 const navLinks = [
   { label: "About", href: "#about" },
   { label: "Experience", href: "#experience" },
   { label: "Projects", href: "#projects" },
   { label: "Skills", href: "#skills" },
+  { label: "Education", href: "#education" },
   { label: "Contact", href: "#contact" },
 ];
 
-export default function Navbar() {
-  const { theme, toggleTheme } = useTheme();
-  const { jellyOn, toggleJelly } = useJellyMode();
+const TOOLTIP_KEY = "jelly-tooltip-dismissed";
+
+export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
+  const { theme, toggleTheme } = useTheme();
+  const { jellyMode, toggleJellyMode } = useJellyMode();
+
+  // First-visit tooltip state
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  useEffect(() => {
+    try {
+      const dismissed = localStorage.getItem(TOOLTIP_KEY);
+      if (!dismissed) {
+        const timer = setTimeout(() => setShowTooltip(true), 2000);
+        return () => clearTimeout(timer);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showTooltip) {
+      const timer = setTimeout(() => {
+        setShowTooltip(false);
+        try { localStorage.setItem(TOOLTIP_KEY, "true"); } catch { /* ignore */ }
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showTooltip]);
+
+  const dismissTooltip = useCallback(() => {
+    setShowTooltip(false);
+    try { localStorage.setItem(TOOLTIP_KEY, "true"); } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -28,106 +62,164 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    const sections = navLinks.map((l) => l.href.slice(1));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveSection(entry.target.id);
+        });
+      },
+      { rootMargin: "-30% 0px -60% 0px" }
+    );
+    sections.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  const nav = (href: string) => {
+    setMobileOpen(false);
+    document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+  };
+
+
+
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled
-          ? "bg-background/80 backdrop-blur-xl border-b border-border shadow-sm"
-          : "bg-transparent"
-      }`}
-    >
-      <div className="container flex items-center justify-between h-16 lg:h-20">
-        {/* Wordmark */}
-        <a
-          href="#"
-          className="font-display text-xl lg:text-2xl text-foreground tracking-tight hover:text-[oklch(0.55_0.08_230)] transition-colors duration-300"
-        >
-          Hardik Lukhi
-        </a>
-
-        {/* Desktop nav */}
-        <div className="hidden lg:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="font-mono text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors duration-300"
-            >
-              {link.label}
-            </a>
-          ))}
-
-          {/* Divider */}
-          <div className="w-px h-5 bg-border" />
-
-          {/* Jelly toggle */}
-          <button
-            onClick={toggleJelly}
-            className={`font-mono text-xs tracking-widest uppercase px-3 py-1.5 rounded-full border transition-all duration-300 ${
-              jellyOn
-                ? "border-[oklch(0.55_0.08_230)] text-[oklch(0.55_0.08_230)] bg-[oklch(0.55_0.08_230_/_8%)]"
-                : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/20"
+    <>
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all ${
+          scrolled ? "py-2" : "py-3"
+        }`}
+        style={{ transitionDuration: "var(--duration-slow)" }}
+      >
+        <div className="container">
+          <nav
+            className={`flex items-center justify-between px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl transition-all ${
+              scrolled
+                ? "bg-background/80 backdrop-blur-lg border border-border shadow-[var(--shadow-md)]"
+                : ""
             }`}
-            title={jellyOn ? "Jelly ON — expressive mode" : "Jelly OFF — subtle premium"}
+            style={{ transitionDuration: "var(--duration-slow)" }}
           >
-            Jelly {jellyOn ? "ON" : "OFF"}
-          </button>
+            {/* Logo */}
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className="flex items-center gap-2 no-underline shrink-0"
+            >
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-primary flex items-center justify-center text-primary-foreground text-[10px] sm:text-xs font-bold">
+                HL
+              </div>
+              <span className="text-sm font-semibold text-foreground tracking-tight hidden sm:block">
+                Hardik Lukhi
+              </span>
+            </a>
 
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-full text-muted-foreground hover:text-foreground transition-colors duration-300"
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-        </div>
+            {/* Desktop links */}
+            <div className="hidden lg:flex items-center gap-1">
+              {navLinks.map((link) => {
+                const isActive = activeSection === link.href.slice(1);
+                return (
+                  <button
+                    key={link.href}
+                    onClick={() => nav(link.href)}
+                    className={`px-3.5 py-1.5 text-xs font-semibold rounded-full border-none outline-none transition-colors cursor-pointer ${
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground"
+                    }`}
+                    style={{ transitionDuration: "var(--duration-fast)" }}
+                  >
+                    {link.label}
+                  </button>
+                );
+              })}
+            </div>
 
-        {/* Mobile menu button */}
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="lg:hidden p-2 text-foreground"
-        >
-          {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
+            {/* Right side: jelly toggle + theme toggle + hamburger */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Jelly mode toggle */}
+              <div className="relative flex items-center">
+                <button
+                  onClick={() => { dismissTooltip(); toggleJellyMode(); }}
+                  className={`p-2 rounded-full transition-colors border no-jelly ${
+                    jellyMode
+                      ? "bg-primary/10 text-primary border-primary/20"
+                      : "text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground border-transparent hover:border-border"
+                  }`}
+                  style={{ transitionDuration: "var(--duration-fast)" }}
+                  aria-label={jellyMode ? "Disable jelly mode" : "Enable jelly mode"}
+                  aria-pressed={jellyMode}
+                >
+                  <Droplet className="w-4 h-4" />
+                </button>
 
-      {/* Mobile menu */}
-      {mobileOpen && (
-        <div className="lg:hidden bg-background/95 backdrop-blur-xl border-b border-border">
-          <div className="container py-6 flex flex-col gap-4">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className="font-mono text-sm tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors py-2"
-              >
-                {link.label}
-              </a>
-            ))}
-            <div className="h-px bg-border my-2" />
-            <div className="flex items-center gap-4">
-              <button
-                onClick={toggleJelly}
-                className={`font-mono text-xs tracking-widest uppercase px-3 py-1.5 rounded-full border transition-all duration-300 ${
-                  jellyOn
-                    ? "border-[oklch(0.55_0.08_230)] text-[oklch(0.55_0.08_230)]"
-                    : "border-border text-muted-foreground"
-                }`}
-              >
-                Jelly {jellyOn ? "ON" : "OFF"}
-              </button>
+                {/* First-visit tooltip — subtle, non-blocking, auto-dismisses */}
+                {showTooltip && (
+                  <div
+                    className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1.5 rounded-lg bg-foreground/90 text-background text-[10px] font-medium whitespace-nowrap pointer-events-auto cursor-pointer z-50"
+                    onClick={dismissTooltip}
+                    role="tooltip"
+                  >
+                    Try Jelly Mode
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-foreground/90 rotate-45" />
+                  </div>
+                )}
+              </div>
+
+              {/* Theme toggle — standard icon button */}
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+                className="p-2 rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground transition-colors border border-transparent hover:border-border no-jelly"
+                style={{ transitionDuration: "var(--duration-fast)" }}
+                aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
               >
-                {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+                {theme === "light" ? (
+                  <Moon className="w-4 h-4" />
+                ) : (
+                  <Sun className="w-4 h-4" />
+                )}
+              </button>
+
+              {/* Mobile hamburger */}
+              <button
+                onClick={() => setMobileOpen(!mobileOpen)}
+                className="lg:hidden p-2 rounded-xl text-foreground hover:bg-foreground/[0.04] no-jelly"
+                aria-label="Toggle menu"
+              >
+                {mobileOpen ? (
+                  <X className="w-4 h-4" />
+                ) : (
+                  <Menu className="w-4 h-4" />
+                )}
               </button>
             </div>
+          </nav>
+        </div>
+      </header>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden bg-background/95 backdrop-blur-lg">
+          <div className="flex flex-col items-center justify-center h-full gap-5">
+            {navLinks.map((link) => (
+              <button
+                key={link.href}
+                onClick={() => nav(link.href)}
+                className="text-lg font-semibold text-foreground hover:text-primary transition-colors cursor-pointer border-none outline-none bg-transparent"
+                style={{ transitionDuration: "var(--duration-fast)" }}
+              >
+                {link.label}
+              </button>
+            ))}
           </div>
         </div>
       )}
-    </nav>
+    </>
   );
 }

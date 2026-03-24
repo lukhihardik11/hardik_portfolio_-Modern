@@ -1,63 +1,73 @@
-import { useEffect, useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+/**
+ * AboutSection — Metric cards and specialization cards.
+ * GSAP: counter animation on metrics, staggered card reveal.
+ * Jelly-card classes are inert in standard mode, additive in jelly mode.
+ */
+import { Cpu, Shield, Factory } from "lucide-react";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
-gsap.registerPlugin(ScrollTrigger);
+const metrics = [
+  { value: "1,900+", label: "Fleet Units Fixed" },
+  { value: "400+", label: "Devices Analyzed" },
+  { value: "20+", label: "Custom Test Fixtures" },
+  { value: "6", label: "Product Generations" },
+];
 
-const ABOUT_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663369311609/6FS5TrUWM8ivQ45q2mHRQx/about-portrait-bg-GfVVUwReCHr7y2VG566wDx.webp";
+const specializations = [
+  {
+    title: "Hardware Sustainment & Test",
+    desc: "End-to-end project delivery across prototyping, test development, CT scanning, fixture design, factory test automation, and CM transfer for EMG wearables at Meta.",
+    Icon: Cpu,
+  },
+  {
+    title: "NPI, DfX & Failure Analysis",
+    desc: "New Product Introduction, Design for Manufacturing/Test, and comprehensive failure analysis with root cause investigation across six product generations.",
+    Icon: Factory,
+  },
+  {
+    title: "Quality & Regulatory",
+    desc: "FDA, ISO 13485, EU MDR, cGMP compliance, Six Sigma, SPC, and 8D methodology across medical device and consumer electronics industries.",
+    Icon: Shield,
+  },
+];
 
-export default function AboutSection() {
-  const sectionRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    if (!sectionRef.current) return;
-    const els = sectionRef.current.querySelectorAll("[data-reveal]");
-    els.forEach((el) => {
-      gsap.fromTo(el, { opacity: 0, y: 40 }, {
-        opacity: 1, y: 0, duration: 0.9, ease: "power3.out",
-        scrollTrigger: { trigger: el, start: "top 85%", toggleActions: "play none none none" },
-      });
-    });
-    return () => ScrollTrigger.getAll().forEach((t) => t.kill());
-  }, []);
+export function AboutSection() {
+  const sectionRef = useScrollReveal<HTMLDivElement>({ animateCounters: true });
 
   return (
-    <section ref={sectionRef} id="about" className="relative py-24 lg:py-32">
-      <div className="container">
-        <div data-reveal className="flex items-center gap-4 mb-16">
-          <span className="section-number">01</span>
-          <div className="h-px flex-1 bg-border" />
-          <span className="font-mono text-xs tracking-[0.2em] uppercase text-muted-foreground">About</span>
-        </div>
-        <div className="grid lg:grid-cols-12 gap-12 lg:gap-16">
-          <div className="lg:col-span-7">
-            <h2 data-reveal className="font-display text-3xl sm:text-4xl lg:text-5xl text-foreground leading-tight mb-8">
-              Building the bridge between engineering precision and program leadership.
-            </h2>
-            <div data-reveal className="space-y-5 text-muted-foreground leading-relaxed">
-              <p>Hardware Engineer and Project Manager who owns Meta’s end-to-end EMG wearable sustainment pipeline — from failure investigation and CT scanning through fixture design, factory test automation, and CM transfer.</p>
-              <p>Eight years spanning six product generations across consumer electronics and regulated medical devices (FDA, ISO 13485, EU MDR), with dual Master’s degrees and expertise in NPI, DfX, SPC, and cross-functional program leadership.</p>
-              <p>I approach every problem with the same philosophy: understand the root cause before proposing solutions, build systems that scale, and lead teams that deliver on schedule without compromising quality.</p>
-            </div>
-            <div data-reveal className="grid grid-cols-2 gap-6 mt-10 pt-10 border-t border-border">
-              <div><div className="font-mono text-[10px] tracking-[0.2em] uppercase text-[oklch(0.55_0.08_230)] mb-1">Location</div><div className="text-sm text-foreground font-medium">Ridgefield Park, NJ</div></div>
-              <div><div className="font-mono text-[10px] tracking-[0.2em] uppercase text-[oklch(0.55_0.08_230)] mb-1">Current Role</div><div className="text-sm text-foreground font-medium">PM & Sr. Mech. Engineer</div></div>
-              <div><div className="font-mono text-[10px] tracking-[0.2em] uppercase text-[oklch(0.55_0.08_230)] mb-1">Company</div><div className="text-sm text-foreground font-medium">Meta Platforms</div></div>
-              <div><div className="font-mono text-[10px] tracking-[0.2em] uppercase text-[oklch(0.55_0.08_230)] mb-1">Education</div><div className="text-sm text-foreground font-medium">Dual M.S. Degrees</div></div>
-            </div>
-          </div>
-          <div className="lg:col-span-5 flex items-center">
-            <div data-reveal className="relative w-full aspect-[4/5] rounded-lg overflow-hidden">
-              <img src={ABOUT_BG} alt="Abstract geometric composition" className="w-full h-full object-cover" loading="lazy" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-8 left-8 right-8">
-                <div className="font-mono text-5xl font-bold text-white">4.0</div>
-                <div className="font-mono text-xs tracking-[0.2em] uppercase text-white/70 mt-1">Perfect GPA — M.S. Information Technology</div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div ref={sectionRef}>
+      {/* Section header */}
+      <div className="mb-14" data-reveal>
+        <p className="section-label-accent text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3">About</p>
+        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground max-w-xl">Engineering with purpose</h2>
+        <p className="text-base text-muted-foreground mt-4 max-w-lg leading-relaxed">
+          {"Hardware Engineer and Project Manager who owns Meta\u2019s end-to-end EMG wearable sustainment pipeline \u2014 spanning failure investigation, CT scanning, fixture design, factory test automation, and CM transfer across six product generations."}
+        </p>
       </div>
-    </section>
+
+      {/* Metrics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-20 sm:mb-28">
+        {metrics.map((m) => (
+          <div key={m.label} data-reveal className="jelly-card card-metric bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-6 text-center card-polished">
+            <p className="text-2xl sm:text-3xl font-bold text-primary relative z-[2]" data-counter={m.value}>{m.value}</p>
+            <p className="text-[11px] font-medium text-muted-foreground mt-2 tracking-wide relative z-[2]">{m.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Specializations */}
+      <div className="grid sm:grid-cols-3 gap-3 sm:gap-5">
+        {specializations.map((s, i) => (
+          <div key={s.title} data-reveal className="jelly-card bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-6 h-full card-polished">
+            <div className="w-10 h-10 mb-4 rounded-xl bg-primary/10 flex items-center justify-center text-primary relative z-[2]">
+              <s.Icon size={18} />
+            </div>
+            <span className="text-[10px] font-mono text-muted-foreground/35 tracking-wider relative z-[2]">{String(i + 1).padStart(2, "0")}</span>
+            <h3 className="text-sm font-semibold text-foreground mt-1.5 mb-2.5 relative z-[2]">{s.title}</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed relative z-[2]">{s.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

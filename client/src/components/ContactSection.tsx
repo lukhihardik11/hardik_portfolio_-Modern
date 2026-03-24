@@ -1,111 +1,111 @@
-import { useEffect, useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Mail, Phone, MapPin, Linkedin, ExternalLink } from "lucide-react";
+/**
+ * ContactSection + Footer — Contact cards, primary CTA, and footer.
+ * GSAP: staggered reveal on scroll.
+ * Jelly-card on contact cards, jelly-btn on primary CTA (inert in standard mode).
+ */
+import { Mail, Linkedin, Phone, ArrowUpRight, ChevronUp } from "lucide-react";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
-gsap.registerPlugin(ScrollTrigger);
+const contactLinks = [
+  { label: "Email", value: "lukhihardik11@gmail.com", href: "mailto:lukhihardik11@gmail.com", Icon: Mail },
+  { label: "LinkedIn", value: "linkedin.com/in/hardiklukhi", href: "https://linkedin.com/in/hardiklukhi", Icon: Linkedin },
+  { label: "Phone", value: "361-228-5831", href: "tel:+13612285831", Icon: Phone },
+];
 
-const CONTACT_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663369311609/6FS5TrUWM8ivQ45q2mHRQx/contact-bg-Yo788DwhD5SbxAaMPkyhT2.webp";
-
-export default function ContactSection() {
-  const sectionRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    if (!sectionRef.current) return;
-    const els = sectionRef.current.querySelectorAll("[data-reveal]");
-    els.forEach((el) => {
-      gsap.fromTo(el, { opacity: 0, y: 30 }, {
-        opacity: 1, y: 0, duration: 0.8,
-        ease: "power3.out",
-        scrollTrigger: { trigger: el, start: "top 88%", toggleActions: "play none none none" },
-      });
-    });
-    return () => ScrollTrigger.getAll().forEach((t) => t.kill());
-  }, []);
+export function ContactSection() {
+  const sectionRef = useScrollReveal<HTMLDivElement>();
 
   return (
-    <section ref={sectionRef} id="contact" className="relative py-24 lg:py-32 overflow-hidden">
-      <div className="absolute inset-0 opacity-40" style={{ backgroundImage: `url(${CONTACT_BG})`, backgroundSize: "cover", backgroundPosition: "center" }} />
-      <div className="absolute inset-0 bg-background/80" />
+    <div ref={sectionRef}>
+      {/* Section header */}
+      <div className="text-center mb-16" data-reveal>
+        <p className="section-label-accent text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3 justify-center">Contact</p>
+        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-4">
+          {"Let\u2019s build something extraordinary"}
+        </h2>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+          Open to discussing hardware engineering roles, project management opportunities,
+          and collaborative work in wearable technology and medical devices.
+        </p>
+      </div>
 
-      <div className="container relative z-10">
-        <div data-reveal className="flex items-center gap-4 mb-16">
-          <span className="section-number">07</span>
-          <div className="h-px flex-1 bg-border" />
-          <span className="font-mono text-xs tracking-[0.2em] uppercase text-muted-foreground">Contact</span>
-        </div>
+      {/* Primary CTA */}
+      <div className="flex justify-center mb-14" data-reveal>
+        <a
+          href="mailto:lukhihardik11@gmail.com"
+          className="jelly-btn jelly-btn-teal btn-glow inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold no-underline hover:opacity-90 transition-opacity"
+        >
+          <Mail size={16} />
+          Say Hello
+          <ArrowUpRight size={14} />
+        </a>
+      </div>
 
-        <div className="grid lg:grid-cols-2 gap-16">
-          <div>
-            <h2 data-reveal className="font-display text-3xl sm:text-4xl lg:text-5xl text-foreground leading-tight mb-6">
-              Let's build something together.
-            </h2>
-            <p data-reveal className="text-muted-foreground leading-relaxed max-w-md mb-10">
-              Whether you're looking for an engineering leader, a project manager, or a technical collaborator — I'm always open to discussing new opportunities.
-            </p>
-
-            <div data-reveal className="space-y-6">
-              <a href="mailto:lukhihardik11@gmail.com" className="flex items-center gap-4 group">
-                <div className="w-10 h-10 rounded-lg bg-card border border-border flex items-center justify-center group-hover:border-[oklch(0.55_0.08_230)] transition-colors">
-                  <Mail size={18} className="text-[oklch(0.55_0.08_230)]" />
-                </div>
-                <div>
-                  <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-muted-foreground">Email</div>
-                  <div className="text-sm text-foreground group-hover:text-[oklch(0.55_0.08_230)] transition-colors">lukhihardik11@gmail.com</div>
-                </div>
-              </a>
-
-              <a href="tel:+13612285831" className="flex items-center gap-4 group">
-                <div className="w-10 h-10 rounded-lg bg-card border border-border flex items-center justify-center group-hover:border-[oklch(0.55_0.08_230)] transition-colors">
-                  <Phone size={18} className="text-[oklch(0.55_0.08_230)]" />
-                </div>
-                <div>
-                  <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-muted-foreground">Phone</div>
-                  <div className="text-sm text-foreground group-hover:text-[oklch(0.55_0.08_230)] transition-colors">361-228-5831</div>
-                </div>
-              </a>
-
-              <a href="https://linkedin.com/in/hardiklukhi" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 group">
-                <div className="w-10 h-10 rounded-lg bg-card border border-border flex items-center justify-center group-hover:border-[oklch(0.55_0.08_230)] transition-colors">
-                  <Linkedin size={18} className="text-[oklch(0.55_0.08_230)]" />
-                </div>
-                <div>
-                  <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-muted-foreground">LinkedIn</div>
-                  <div className="text-sm text-foreground group-hover:text-[oklch(0.55_0.08_230)] transition-colors flex items-center gap-1">
-                    linkedin.com/in/hardiklukhi <ExternalLink size={12} />
-                  </div>
-                </div>
-              </a>
-
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-card border border-border flex items-center justify-center">
-                  <MapPin size={18} className="text-[oklch(0.55_0.08_230)]" />
-                </div>
-                <div>
-                  <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-muted-foreground">Location</div>
-                  <div className="text-sm text-foreground">Ridgefield Park, NJ</div>
-                </div>
-              </div>
+      {/* Contact cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-12">
+        {contactLinks.map((link) => (
+          <a
+            key={link.label}
+            href={link.href}
+            target={link.href.startsWith("http") ? "_blank" : undefined}
+            rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}
+            data-reveal
+            className="jelly-card bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-5 text-center group no-underline card-polished"
+          >
+            <div className="w-10 h-10 mx-auto mb-3 rounded-xl bg-primary/10 flex items-center justify-center text-primary relative z-[2]">
+              <link.Icon size={16} />
             </div>
-          </div>
+            <div className="text-xs font-semibold text-foreground mb-0.5 relative z-[2]">{link.label}</div>
+            <div className="text-[11px] text-muted-foreground font-mono flex items-center justify-center gap-1 relative z-[2]">
+              {link.value}
+              <ArrowUpRight size={9} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-          <div data-reveal className="flex items-center">
-            <div className="w-full p-8 lg:p-12 rounded-lg bg-card border border-border">
-              <h3 className="font-display text-2xl text-foreground mb-4">Open to opportunities</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed mb-8">
-                I'm currently exploring new roles in hardware engineering leadership, program management, and technical operations. If you have an interesting challenge, let's talk.
-              </p>
+export function Footer() {
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  return (
+    <footer className="py-8 relative">
+      <div className="footer-separator mb-8" />
+      <div className="container">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="text-xs text-muted-foreground/35">
+            &copy; {new Date().getFullYear()} Hardik Lukhi
+          </span>
+          <span className="text-[10px] font-mono text-muted-foreground/20 tracking-wider">
+            Designed &amp; engineered with precision
+          </span>
+          <div className="flex items-center gap-2">
+            {contactLinks.map((link) => (
               <a
-                href="mailto:lukhihardik11@gmail.com"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[oklch(0.55_0.08_230)] text-white font-body text-sm font-medium rounded-lg hover:bg-[oklch(0.50_0.09_230)] transition-all duration-300"
+                key={link.label}
+                href={link.href}
+                target={link.href.startsWith("http") ? "_blank" : undefined}
+                rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground/30 hover:text-foreground/60 transition-colors duration-200 no-underline"
+                aria-label={link.label}
               >
-                <Mail size={16} />
-                Send an Email
+                <link.Icon size={13} />
               </a>
-            </div>
+            ))}
+            <button
+              onClick={scrollToTop}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground/30 hover:text-foreground/60 transition-colors duration-200 bg-transparent border-none ml-1 no-jelly"
+              aria-label="Back to top"
+            >
+              <ChevronUp size={13} />
+            </button>
           </div>
         </div>
       </div>
-    </section>
+    </footer>
   );
 }

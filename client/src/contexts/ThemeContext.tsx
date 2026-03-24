@@ -1,34 +1,47 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+/**
+ * ThemeContext — Phase 1A Foundation
+ *
+ * Simple light/dark theme management with localStorage persistence.
+ * DOM: adds/removes "dark" class on document.documentElement.
+ * Flash prevention: index.html inline script applies stored theme before React mounts.
+ */
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 
 type Theme = "light" | "dark";
 
 interface ThemeContextType {
   theme: Theme;
-  toggleTheme?: () => void;
-  switchable: boolean;
+  toggleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-interface ThemeProviderProps {
-  children: React.ReactNode;
-  defaultTheme?: Theme;
-  switchable?: boolean;
+const THEME_KEY = "theme";
+
+function safeGetItem(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
-export function ThemeProvider({
-  children,
-  defaultTheme = "light",
-  switchable = false,
-}: ThemeProviderProps) {
+function safeSetItem(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // ignore — private browsing or quota exceeded
+  }
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    if (switchable) {
-      const stored = localStorage.getItem("theme");
-      return (stored as Theme) || defaultTheme;
-    }
-    return defaultTheme;
+    const stored = safeGetItem(THEME_KEY);
+    if (stored === "light" || stored === "dark") return stored;
+    return "light";
   });
 
+  // Sync DOM class and persist
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "dark") {
@@ -36,20 +49,15 @@ export function ThemeProvider({
     } else {
       root.classList.remove("dark");
     }
+    safeSetItem(THEME_KEY, theme);
+  }, [theme]);
 
-    if (switchable) {
-      localStorage.setItem("theme", theme);
-    }
-  }, [theme, switchable]);
-
-  const toggleTheme = switchable
-    ? () => {
-        setTheme(prev => (prev === "light" ? "dark" : "light"));
-      }
-    : undefined;
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, switchable }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

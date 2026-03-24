@@ -1,21 +1,57 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+/**
+ * JellyModeContext — Manages the "Jelly Mode" toggle state.
+ *
+ * Behavioral contract:
+ * - Default: OFF (clean, elegant design with minimal animations).
+ * - ON: Enhanced jelly-like spring physics on all interactive elements,
+ *   translucent glassmorphism surfaces, wobbly hover effects, bouncy transitions.
+ * - DOM: adds/removes "jelly-mode" class on document.documentElement.
+ * - Flash prevention: index.html inline script applies stored jelly state before React mounts.
+ * - Persists user preference in localStorage with try/catch for private browsing.
+ * - No WebGPU dependency. Uses CSS spring animations — works on ALL devices.
+ */
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 interface JellyModeContextType {
-  jellyOn: boolean;
-  toggleJelly: () => void;
+  jellyMode: boolean;
+  toggleJellyMode: () => void;
 }
 
 const JellyModeContext = createContext<JellyModeContextType | undefined>(undefined);
 
-export function JellyModeProvider({ children }: { children: React.ReactNode }) {
-  const [jellyOn, setJellyOn] = useState(false);
+const JELLY_MODE_KEY = 'jelly-mode';
 
-  const toggleJelly = useCallback(() => {
-    setJellyOn((prev) => !prev);
+export function JellyModeProvider({ children }: { children: React.ReactNode }) {
+  const [jellyMode, setJellyMode] = useState(() => {
+    try {
+      const stored = localStorage.getItem(JELLY_MODE_KEY);
+      // Default to OFF for new visitors (stored === null)
+      return stored === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // Update html class and persist
+  useEffect(() => {
+    if (jellyMode) {
+      document.documentElement.classList.add('jelly-mode');
+    } else {
+      document.documentElement.classList.remove('jelly-mode');
+    }
+    try {
+      localStorage.setItem(JELLY_MODE_KEY, String(jellyMode));
+    } catch {
+      // ignore
+    }
+  }, [jellyMode]);
+
+  const toggleJellyMode = useCallback(() => {
+    setJellyMode(prev => !prev);
   }, []);
 
   return (
-    <JellyModeContext.Provider value={{ jellyOn, toggleJelly }}>
+    <JellyModeContext.Provider value={{ jellyMode, toggleJellyMode }}>
       {children}
     </JellyModeContext.Provider>
   );
@@ -24,7 +60,7 @@ export function JellyModeProvider({ children }: { children: React.ReactNode }) {
 export function useJellyMode() {
   const context = useContext(JellyModeContext);
   if (!context) {
-    throw new Error("useJellyMode must be used within JellyModeProvider");
+    throw new Error('useJellyMode must be used within JellyModeProvider');
   }
   return context;
 }

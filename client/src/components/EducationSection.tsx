@@ -1,9 +1,11 @@
 /**
- * EducationSection — Degree cards and internship cards with jelly-card.
+ * EducationSection — Degree cards and internship cards with JellyWrapper.
  * GSAP: staggered card reveal on scroll.
+ * JellyWrapper: spring physics on cards in jelly mode.
  */
 import { GraduationCap, Award, Briefcase } from "lucide-react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { JellyWrapper } from "@/components/JellyWrapper";
 
 const education = [
   { degree: "M.S. Information Technology", school: "University of the Cumberlands", location: "Williamsburg, KY", year: "2023", gpa: "4.0 / 4.0", highlight: "Perfect GPA" },
@@ -48,7 +50,7 @@ export function EducationSection() {
       {/* Degrees */}
       <div className="grid sm:grid-cols-3 gap-3 sm:gap-5 mb-16">
         {education.map((edu) => (
-          <div key={edu.degree} data-reveal className="jelly-card card-metric bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-6 card-polished">
+          <JellyWrapper key={edu.degree} intensity="medium" className="jelly-card card-metric bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-6 card-polished">
             <div className="w-10 h-10 mb-4 rounded-xl bg-primary/10 flex items-center justify-center text-primary relative z-[2]">
               <GraduationCap size={18} />
             </div>
@@ -67,7 +69,7 @@ export function EducationSection() {
                 </span>
               )}
             </div>
-          </div>
+          </JellyWrapper>
         ))}
       </div>
 
@@ -80,7 +82,7 @@ export function EducationSection() {
       </div>
       <div className="grid sm:grid-cols-2 gap-3 sm:gap-5">
         {internships.map((intern) => (
-          <div key={intern.role} data-reveal className="jelly-card bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-6 card-polished">
+          <JellyWrapper key={intern.role} intensity="soft" className="jelly-card bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-6 card-polished">
             <h4 className="text-sm font-semibold text-foreground mb-1 relative z-[2]">{intern.role}</h4>
             <p className="text-xs text-primary font-medium mb-1 relative z-[2]">{intern.company}</p>
             <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-4 relative z-[2]">
@@ -95,7 +97,7 @@ export function EducationSection() {
                 </li>
               ))}
             </ul>
-          </div>
+          </JellyWrapper>
         ))}
       </div>
     </div>

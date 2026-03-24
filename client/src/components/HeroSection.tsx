@@ -13,6 +13,7 @@
 import React, { useRef, useEffect, Suspense, lazy, useCallback, useMemo } from "react";
 import { Download, ArrowDown } from "lucide-react";
 import { useJellyMode } from "@/contexts/JellyModeContext";
+import { JellyButton } from "@/components/JellyWrapper";
 import { useSplineGating } from "@/hooks/useSplineGating";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -295,29 +296,32 @@ export function HeroSection() {
             {/* CTAs */}
             <div className="pt-1">
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <a
+                <JellyButton
                   href="#contact"
-                  onClick={scrollTo("#contact")}
                   className="jelly-btn jelly-btn-teal btn-glow inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold no-underline hover:opacity-90 transition-opacity"
+                  onClick={() => document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' })}
                 >
                   Say Hello
-                </a>
+                </JellyButton>
                 <div className="flex items-center gap-3">
-                  <a
+                  <JellyButton
                     href="#projects"
-                    onClick={scrollTo("#projects")}
                     className="jelly-btn jelly-btn-ghost inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-border text-foreground text-sm font-medium no-underline hover:bg-muted/50 hover:border-foreground/20 transition-all duration-200"
+                    onClick={() => document.querySelector('#projects')?.scrollIntoView({ behavior: 'smooth' })}
                   >
                     <Download size={13} />
                     View Work
-                  </a>
-                  <button
-                    onClick={() => alert("Resume download coming soon.")}
-                    className="jelly-btn jelly-btn-ghost inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-border text-foreground text-sm font-medium hover:bg-muted/50 hover:border-foreground/20 transition-all duration-200 bg-transparent"
+                  </JellyButton>
+                  <JellyButton
+                    href="https://d2xsxph8kpxj0f.cloudfront.net/310519663369311609/6FS5TrUWM8ivQ45q2mHRQx/Hardik_Lukhi_Resume_ATS_d0f48f17.pdf"
+                    download="Hardik_Lukhi_Resume.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="jelly-btn jelly-btn-ghost inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-border text-foreground text-sm font-medium no-underline hover:bg-muted/50 hover:border-foreground/20 transition-all duration-200 bg-transparent"
                   >
                     <Download size={13} />
                     Resume
-                  </button>
+                  </JellyButton>
                 </div>
               </div>
             </div>

@@ -1,10 +1,6 @@
 /**
- * Home.tsx — Phase 1B Content + Phase 1C Polish + Phase 2A Jelly Atmosphere
- *
- * Real authored content in all sections. Strengthened alternating backgrounds.
- * CSS-only section dividers for visual rhythm.
- * Phase 2A: jellyBg prop on alternating sections for caustic overlay in jelly mode.
- * No Framer Motion, no GSAP, no Spline, no WebGPU.
+ * Home.tsx — Full portfolio page composition.
+ * All sections with SignalDividers and PhilosophySection.
  */
 import { Navbar } from "@/components/Navbar";
 import { Section } from "@/components/Section";
@@ -15,6 +11,8 @@ import { ProjectsSection } from "@/components/ProjectsSection";
 import { SkillsSection } from "@/components/SkillsSection";
 import { EducationSection } from "@/components/EducationSection";
 import { ContactSection, Footer } from "@/components/ContactSection";
+import { PhilosophySection } from "@/components/PhilosophySection";
+import { SignalDivider } from "@/components/SignalDivider";
 
 export default function Home() {
   return (
@@ -24,29 +22,45 @@ export default function Home() {
       {/* Spacer for fixed navbar */}
       <div className="h-16" />
 
-      <Section id="hero" divider jellyBg>
+      <Section id="hero" jellyBg>
         <HeroSection />
       </Section>
 
-      <Section id="about" className="bg-muted/40" divider jellyBg>
+      <SignalDivider />
+
+      <Section id="about" className="bg-muted/40" jellyBg>
         <AboutSection />
       </Section>
 
-      <Section id="experience" divider jellyBg>
+      <SignalDivider />
+
+      <Section id="experience" jellyBg>
         <ExperienceSection />
       </Section>
 
-      <Section id="projects" className="bg-muted/40" divider jellyBg>
+      <SignalDivider />
+
+      <PhilosophySection />
+
+      <SignalDivider />
+
+      <Section id="projects" className="bg-muted/40" jellyBg>
         <ProjectsSection />
       </Section>
 
-      <Section id="skills" divider jellyBg>
+      <SignalDivider />
+
+      <Section id="skills" jellyBg>
         <SkillsSection />
       </Section>
 
-      <Section id="education" className="bg-muted/40" divider jellyBg>
+      <SignalDivider />
+
+      <Section id="education" className="bg-muted/40" jellyBg>
         <EducationSection />
       </Section>
+
+      <SignalDivider />
 
       <Section id="contact" jellyBg>
         <ContactSection />

@@ -1,8 +1,9 @@
 /**
- * SkillsSection — CSS progress bars with jelly-card and jelly-skill-bar.
+ * SkillsSection — CSS progress bars with JellyWrapper spring physics.
  * GSAP: skill bar fill animation on scroll, staggered card reveal.
  */
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { JellyWrapper } from "@/components/JellyWrapper";
 
 const skillCategories = [
   {
@@ -71,7 +72,7 @@ export function SkillsSection() {
       {/* Category cards — 2-column grid */}
       <div className="grid sm:grid-cols-2 gap-3 sm:gap-5">
         {skillCategories.map((cat) => (
-          <div key={cat.number} data-reveal className="jelly-card bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-6 card-polished">
+          <JellyWrapper key={cat.number} intensity="soft" className="jelly-card bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-6 card-polished">
             {/* Category header */}
             <div className="flex items-center gap-3 mb-5 relative z-[2]">
               <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-mono font-bold text-primary shrink-0">
@@ -97,7 +98,7 @@ export function SkillsSection() {
                 </div>
               ))}
             </div>
-          </div>
+          </JellyWrapper>
         ))}
       </div>
     </div>

@@ -1,10 +1,12 @@
 /**
  * ContactSection + Footer — Contact cards, primary CTA, and footer.
  * GSAP: staggered reveal on scroll.
- * Jelly-card on contact cards, jelly-btn on primary CTA (inert in standard mode).
+ * JellyWrapper: spring physics on contact cards in jelly mode.
+ * JellyButton: spring physics on primary CTA in jelly mode.
  */
 import { Mail, Linkedin, Phone, ArrowUpRight, ChevronUp } from "lucide-react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { JellyWrapper, JellyButton } from "@/components/JellyWrapper";
 
 const contactLinks = [
   { label: "Email", value: "lukhihardik11@gmail.com", href: "mailto:lukhihardik11@gmail.com", Icon: Mail },
@@ -31,36 +33,41 @@ export function ContactSection() {
 
       {/* Primary CTA */}
       <div className="flex justify-center mb-14" data-reveal>
-        <a
+        <JellyButton
           href="mailto:lukhihardik11@gmail.com"
           className="jelly-btn jelly-btn-teal btn-glow inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold no-underline hover:opacity-90 transition-opacity"
         >
           <Mail size={16} />
           Say Hello
           <ArrowUpRight size={14} />
-        </a>
+        </JellyButton>
       </div>
 
       {/* Contact cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-12">
         {contactLinks.map((link) => (
-          <a
+          <JellyWrapper
             key={link.label}
-            href={link.href}
-            target={link.href.startsWith("http") ? "_blank" : undefined}
-            rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}
-            data-reveal
-            className="jelly-card bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-5 text-center group no-underline card-polished"
+            as="article"
+            intensity="medium"
+            className="jelly-card bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-5 text-center group card-polished"
           >
-            <div className="w-10 h-10 mx-auto mb-3 rounded-xl bg-primary/10 flex items-center justify-center text-primary relative z-[2]">
-              <link.Icon size={16} />
-            </div>
-            <div className="text-xs font-semibold text-foreground mb-0.5 relative z-[2]">{link.label}</div>
-            <div className="text-[11px] text-muted-foreground font-mono flex items-center justify-center gap-1 relative z-[2]">
-              {link.value}
-              <ArrowUpRight size={9} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-          </a>
+            <a
+              href={link.href}
+              target={link.href.startsWith("http") ? "_blank" : undefined}
+              rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}
+              className="no-underline block"
+            >
+              <div className="w-10 h-10 mx-auto mb-3 rounded-xl bg-primary/10 flex items-center justify-center text-primary relative z-[2]">
+                <link.Icon size={16} />
+              </div>
+              <div className="text-xs font-semibold text-foreground mb-0.5 relative z-[2]">{link.label}</div>
+              <div className="text-[11px] text-muted-foreground font-mono flex items-center justify-center gap-1 relative z-[2]">
+                {link.value}
+                <ArrowUpRight size={9} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            </a>
+          </JellyWrapper>
         ))}
       </div>
     </div>

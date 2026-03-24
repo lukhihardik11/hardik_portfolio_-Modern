@@ -1,9 +1,11 @@
 /**
- * ExperienceSection — Timeline layout with jelly-card on timeline cards.
+ * ExperienceSection — Timeline layout with JellyWrapper on cards.
  * GSAP: staggered card reveal on scroll.
+ * JellyWrapper: spring physics on timeline cards in jelly mode.
  */
 import { MapPin } from "lucide-react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { JellyWrapper } from "@/components/JellyWrapper";
 
 const experiences = [
   {
@@ -97,7 +99,7 @@ export function ExperienceSection() {
                 style={exp.current ? { left: "0.3125rem", boxShadow: "0 0 6px oklch(from var(--primary) l c h / 30%)" } : undefined}
               />
 
-              <div className={`jelly-card bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-6 card-polished ${exp.current ? "card-current" : ""}`}>
+              <JellyWrapper intensity="soft" className={`jelly-card bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-6 card-polished ${exp.current ? "card-current" : ""}`}>
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4 relative z-[2]">
                   <div>
@@ -122,7 +124,7 @@ export function ExperienceSection() {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </JellyWrapper>
             </div>
           ))}
         </div>

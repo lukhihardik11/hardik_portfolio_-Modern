@@ -1,26 +1,34 @@
 /**
- * HeroSection — Spline 3D robot as primary visual, text/CTAs as primary communication.
- *
- * Layout:
- *   Desktop ≥1280px: 5-column grid (text 3 cols + Spline 2 cols)
- *   Tablet 768-1279px: stacked, Spline below text
- *   Mobile <768px: text only, no Spline (saves ~5.6MB)
- *
- * Motion: GSAP for text mask reveal + blob parallax. CSS for transitions.
- * Spline gating: useSplineGating controls mount/timeout/fallback.
- * Cross-section: removed from hero per approved plan.
+ * HeroSection — Premium hero with GSAP-powered animations + jelly material integration.
+ * 
+ * GSAP Techniques applied (per Appendix I mapping):
+ *   - SplitText character reveal on name
+ *   - Parallax depth layers (3 layers at different speeds)
+ *   - Scale/zoom on 3D visual
+ *   - Magnetic hover on CTAs
+ * 
+ * Jelly integration:
+ *   - HeroCrossSection anchor component (WebGPU/Canvas2D SDF material)
+ *   - Jelly CSS classes on cards, buttons, pills
+ * 
+ * Two-tier: Desktop gets full parallax. Mobile gets simpler reveals.
+ * Respects prefers-reduced-motion.
  */
-import React, { useRef, useEffect, Suspense, lazy, useCallback, useMemo } from "react";
-import { Download, ArrowDown } from "lucide-react";
+import { useRef, useEffect, Suspense, lazy, useCallback, useMemo } from "react";
+import React from "react";
+import { Download, ArrowDown, Mail } from "lucide-react";
 import { useJellyMode } from "@/contexts/JellyModeContext";
-import { JellyButton } from "@/components/JellyWrapper";
 import { useSplineGating } from "@/hooks/useSplineGating";
+import { Magnetic } from "@/components/animation/Magnetic";
+import { useAnimation } from "@/components/animation/AnimationProvider";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { SplitText } from "gsap/SplitText";
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, SplitText);
 
 const Spline = lazy(() => import("@splinetool/react-spline"));
+const HeroCrossSection = lazy(() => import("@/components/anchors/HeroCrossSection"));
 
 const companies = [
   { name: "Meta", active: true },
@@ -50,25 +58,16 @@ class SplineErrorBoundary extends React.Component<
   }
 }
 
-/* Stylized fallback — shown on timeout or WebGL error */
 function HeroFallbackVisual() {
   return (
     <div className="w-full h-full flex items-center justify-center relative">
       <div
-        className="absolute w-80 h-80 rounded-full animate-pulse"
+        className="absolute w-80 h-80 rounded-full"
         style={{
           background:
-            "radial-gradient(ellipse, oklch(0.55 0.18 230 / 25%) 0%, oklch(0.65 0.12 200 / 12%) 40%, transparent 70%)",
-          filter: "blur(30px)",
-        }}
-      />
-      <div
-        className="w-52 h-52"
-        style={{
-          background:
-            "radial-gradient(circle at 40% 35%, oklch(0.60 0.18 200 / 40%) 0%, oklch(0.50 0.15 230 / 20%) 50%, transparent 75%)",
-          borderRadius: "60% 40% 50% 50% / 50% 60% 40% 60%",
-          animation: "pulse 4s ease-in-out infinite",
+            "radial-gradient(ellipse, oklch(0.55 0.18 230 / 20%) 0%, oklch(0.65 0.12 200 / 8%) 40%, transparent 70%)",
+          filter: "blur(40px)",
+          animation: "pulse 6s ease-in-out infinite",
         }}
       />
     </div>
@@ -78,71 +77,140 @@ function HeroFallbackVisual() {
 export function HeroSection() {
   const { jellyMode } = useJellyMode();
   const { shouldRender: shouldRenderSpline, hasTimedOut, onSplineReady } = useSplineGating();
+  const { isDesktop, reducedMotion, isTouch } = useAnimation();
 
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const nameRef = useRef<HTMLHeadingElement>(null);
-  const blob1Ref = useRef<HTMLDivElement>(null);
-  const blob2Ref = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const subtitleRef = useRef<HTMLParagraphElement>(null);
+  const taglineRef = useRef<HTMLParagraphElement>(null);
+  const bioRef = useRef<HTMLParagraphElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const pillsRef = useRef<HTMLDivElement>(null);
+  const splineWrapRef = useRef<HTMLDivElement>(null);
+  const scrollIndicatorRef = useRef<HTMLDivElement>(null);
 
-  const scrollTo = (id: string) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
-  };
+  // Parallax layers
+  const bgLayer1 = useRef<HTMLDivElement>(null);
+  const bgLayer2 = useRef<HTMLDivElement>(null);
+  const bgLayer3 = useRef<HTMLDivElement>(null);
 
-  /* GSAP: text mask reveal + blob parallax */
   useEffect(() => {
-    if (!nameRef.current) return;
-
-    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReduced) {
-      // Ensure everything is visible even if reduced-motion
-      if (contentRef.current) {
-        Array.from(contentRef.current.children).forEach((child) => {
-          (child as HTMLElement).style.opacity = "1";
-          (child as HTMLElement).style.transform = "none";
-        });
-      }
+    if (reducedMotion) {
+      // Make everything visible immediately
+      [nameRef, subtitleRef, taglineRef, bioRef, ctaRef, pillsRef].forEach(ref => {
+        if (ref.current) {
+          ref.current.style.opacity = "1";
+          ref.current.style.transform = "none";
+        }
+      });
       return;
     }
 
-    // Name clip-path reveal — fast, no delay
-    gsap.fromTo(
-      nameRef.current,
-      { clipPath: "inset(0 100% 0 0)" },
-      {
-        clipPath: "inset(0 0% 0 0)",
-        duration: 0.8,
-        ease: "power3.out",
-        delay: 0,
+    const ctx = gsap.context(() => {
+      // ═══════════════════════════════════════
+      // 1. SplitText character reveal on name
+      // ═══════════════════════════════════════
+      if (nameRef.current) {
+        document.fonts.ready.then(() => {
+          if (!nameRef.current) return;
+          SplitText.create(nameRef.current, {
+            type: "chars",
+            autoSplit: true,
+            onSplit(self) {
+              gsap.from(self.chars, {
+                yPercent: 120,
+                opacity: 0,
+                rotateX: -60,
+                stagger: 0.03,
+                duration: 1.2,
+                ease: "expo.out",
+                delay: 0.15,
+              });
+            },
+          });
+        });
       }
-    );
 
-    // Blob parallax on scroll
-    [blob1Ref.current, blob2Ref.current].forEach((blob, i) => {
-      if (!blob) return;
-      gsap.to(blob, {
-        y: i === 0 ? -80 : -50,
-        ease: "none",
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top top",
-          end: "bottom top",
-          scrub: 1,
-        },
+      // ═══════════════════════════════════════
+      // 2. Staggered content reveals
+      // ═══════════════════════════════════════
+      const contentElements = [
+        { el: subtitleRef.current, delay: 0.5 },
+        { el: taglineRef.current, delay: 0.65 },
+        { el: bioRef.current, delay: 0.8 },
+        { el: ctaRef.current, delay: 0.95 },
+        { el: pillsRef.current, delay: 1.1 },
+      ];
+
+      contentElements.forEach(({ el, delay }) => {
+        if (!el) return;
+        gsap.fromTo(el,
+          { opacity: 0, y: 30 },
+          { opacity: 1, y: 0, duration: 1, delay, ease: "expo.out" }
+        );
       });
-    });
 
-    // Content children use CSS transitions instead of GSAP
-    // to prevent invisible-text-on-load issues.
-    // The name clip-path reveal above is the only GSAP entrance effect.
+      // Spline visual fade-in with scale
+      if (splineWrapRef.current) {
+        gsap.fromTo(splineWrapRef.current,
+          { opacity: 0, scale: 0.92 },
+          { opacity: 1, scale: 1, duration: 1.4, delay: 0.4, ease: "expo.out" }
+        );
+      }
 
-    return () => {
-      ScrollTrigger.getAll().forEach((st) => {
-        if (st.trigger === sectionRef.current) st.kill();
-      });
-    };
-  }, []);
+      // ═══════════════════════════════════════
+      // 3. Parallax depth layers (desktop only)
+      // ═══════════════════════════════════════
+      if (isDesktop) {
+        [
+          { ref: bgLayer1.current, yEnd: -120 },
+          { ref: bgLayer2.current, yEnd: -60 },
+          { ref: bgLayer3.current, yEnd: -30 },
+        ].forEach(({ ref: el, yEnd }) => {
+          if (!el) return;
+          gsap.to(el, {
+            y: yEnd,
+            ease: "none",
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: "top top",
+              end: "bottom top",
+              scrub: 1,
+            },
+          });
+        });
+
+        // Scroll-driven fade out of hero content
+        gsap.to(sectionRef.current, {
+          opacity: 0,
+          y: -60,
+          ease: "none",
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "60% top",
+            end: "bottom top",
+            scrub: 1,
+          },
+        });
+      }
+
+      // Scroll indicator fade
+      if (scrollIndicatorRef.current) {
+        gsap.to(scrollIndicatorRef.current, {
+          opacity: 0,
+          y: -20,
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "15% top",
+            end: "30% top",
+            scrub: 1,
+          },
+        });
+      }
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, [isDesktop, reducedMotion]);
 
   const onSplineLoad = useCallback(
     (splineApp: any) => {
@@ -172,7 +240,6 @@ export function HeroSection() {
 
   const splineContent = useMemo(() => {
     if (!shouldRenderSpline) return null;
-
     if (hasTimedOut) return <HeroFallbackVisual />;
 
     return (
@@ -180,13 +247,10 @@ export function HeroSection() {
         <Suspense
           fallback={
             <div className="w-full h-full flex items-center justify-center">
-              <div
-                className="w-24 h-24 animate-pulse"
-                style={{
-                  background:
-                    "radial-gradient(circle, oklch(0.55 0.18 230 / 25%) 0%, transparent 70%)",
-                }}
-              />
+              <div className="w-20 h-20" style={{
+                background: "radial-gradient(circle, oklch(0.55 0.18 230 / 20%) 0%, transparent 70%)",
+                filter: "blur(20px)",
+              }} />
             </div>
           }
         >
@@ -207,51 +271,65 @@ export function HeroSection() {
     <section
       ref={sectionRef}
       id="hero"
-      className="relative flex items-center md:items-start xl:items-center overflow-hidden min-h-[100svh] md:min-h-0 xl:min-h-screen"
+      className="relative flex items-center overflow-hidden min-h-[100svh]"
     >
-      {/* Background blobs */}
+      {/* ═══ Parallax background layers ═══ */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Layer 1 — deepest, moves fastest */}
         <div
-          ref={blob1Ref}
-          className="absolute w-[320px] h-[320px] -top-24 -left-24 opacity-10 dark:opacity-25"
+          ref={bgLayer1}
+          className="absolute w-[500px] h-[500px] -top-32 -left-32"
           style={{
-            background:
-              "radial-gradient(ellipse, oklch(0.55 0.18 230 / 8%) 0%, transparent 70%)",
+            background: "radial-gradient(ellipse, oklch(0.55 0.18 230 / 6%) 0%, transparent 70%)",
             borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%",
+            willChange: "transform",
           }}
         />
+        {/* Layer 2 — mid depth */}
         <div
-          ref={blob2Ref}
-          className="absolute w-[280px] h-[280px] -bottom-16 -right-16 opacity-8 dark:opacity-20"
+          ref={bgLayer2}
+          className="absolute w-[400px] h-[400px] -bottom-20 -right-20"
           style={{
-            background:
-              "radial-gradient(ellipse, oklch(0.75 0.15 65 / 6%) 0%, transparent 70%)",
+            background: "radial-gradient(ellipse, oklch(0.75 0.15 65 / 4%) 0%, transparent 70%)",
             borderRadius: "40% 60% 70% 30% / 50% 40% 60% 50%",
+            willChange: "transform",
           }}
         />
+        {/* Layer 3 — shallowest, moves slowest */}
         <div
-          className="absolute w-[200px] h-[200px] top-1/3 left-1/3 opacity-5 dark:opacity-[0.12]"
+          ref={bgLayer3}
+          className="absolute w-[300px] h-[300px] top-1/3 left-1/4"
           style={{
-            background:
-              "radial-gradient(ellipse, oklch(0.60 0.14 200 / 5%) 0%, transparent 70%)",
+            background: "radial-gradient(ellipse, oklch(0.60 0.14 200 / 3%) 0%, transparent 70%)",
             borderRadius: "50% 60% 30% 60% / 30% 60% 70% 40%",
+            willChange: "transform",
           }}
         />
       </div>
 
-      <div className="container relative z-10 pt-16 sm:pt-18 md:pt-20 xl:pt-24 pb-24 sm:pb-20">
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 md:gap-10 xl:gap-8 items-center">
-          {/* Left column: text content */}
-          <div ref={contentRef} className="xl:col-span-3 flex flex-col gap-5 sm:gap-6 md:gap-7 xl:gap-8">
+      <div className="container relative z-10 pt-20 sm:pt-24 md:pt-28 xl:pt-32 pb-28 sm:pb-24">
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 md:gap-12 xl:gap-10 items-center">
+          {/* ═══ Left column: text content ═══ */}
+          <div className="xl:col-span-3 flex flex-col gap-5 sm:gap-6 md:gap-7 xl:gap-8">
             {/* Status pill */}
-            <div>
-              <span className="glass-pill inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-card border border-border text-muted-foreground">
+            <div style={{ opacity: 0 }} ref={el => {
+              if (el && !reducedMotion) {
+                gsap.to(el, { opacity: 1, delay: 0.1, duration: 0.6 });
+              } else if (el) {
+                el.style.opacity = "1";
+              }
+            }}>
+              <span className={`inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-muted-foreground ${
+                jellyMode
+                  ? "glass-pill"
+                  : "bg-card/60 backdrop-blur-sm border border-border/50"
+              }`}>
                 <span
-                  className="w-2.5 h-2.5 rounded-full animate-pulse"
+                  className="w-2 h-2 rounded-full"
                   style={{
-                    background:
-                      "radial-gradient(circle at 35% 35%, oklch(0.80 0.16 155), oklch(0.60 0.20 155))",
-                    boxShadow: "0 0 10px oklch(0.65 0.20 155 / 40%)",
+                    background: "radial-gradient(circle at 35% 35%, oklch(0.80 0.16 155), oklch(0.60 0.20 155))",
+                    boxShadow: "0 0 8px oklch(0.65 0.20 155 / 35%)",
+                    animation: "pulse 3s ease-in-out infinite",
                   }}
                 />
                 <span className="text-[11px] font-medium tracking-wide">
@@ -260,15 +338,15 @@ export function HeroSection() {
               </span>
             </div>
 
-            {/* Name with GSAP clip-path reveal */}
+            {/* Name — SplitText character reveal */}
             <h1
               ref={nameRef}
-              className="text-4xl sm:text-5xl md:text-6xl xl:text-[5.5rem] font-bold tracking-[-0.03em] leading-[1.02]"
+              className="font-display text-[2.75rem] sm:text-5xl md:text-6xl lg:text-7xl xl:text-[5.25rem] tracking-[-0.035em] leading-[1.02]"
+              style={{ fontWeight: 700, clipPath: "inset(0 0 0 0)" }}
             >
-              <span className="text-foreground">Hardik</span>
-              <br />
+              <span className="text-foreground block">Hardik</span>
               <span
-                className="bg-clip-text text-transparent"
+                className="bg-clip-text text-transparent block"
                 style={{
                   backgroundImage:
                     "linear-gradient(135deg, var(--jelly-teal) 0%, oklch(0.65 0.16 200) 40%, var(--jelly-amber) 100%)",
@@ -278,63 +356,105 @@ export function HeroSection() {
               </span>
             </h1>
 
-            {/* Role + bio */}
-            <div className="flex flex-col gap-2 sm:gap-3">
-              <p className="text-lg sm:text-xl font-semibold text-foreground/80 leading-relaxed tracking-[-0.01em]">
-                Project Manager | Senior Mechanical Engineer
-              </p>
-              <p className="text-[11px] sm:text-xs font-medium text-foreground/70 tracking-wide mb-1 font-mono uppercase">
-                Hardware Sustainment &amp; Test Engineering
-              </p>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-lg">
-                {
-                  "Hardware Engineer and Project Manager who owns Meta\u2019s end-to-end EMG wearable sustainment pipeline \u2014 from failure investigation and CT scanning through fixture design, factory test automation, and CM transfer. Eight years spanning six product generations across consumer electronics and regulated medical devices (FDA, ISO 13485, EU MDR), with dual Master\u2019s degrees and expertise in NPI, DfX, SPC, and cross-functional program leadership."
-                }
-              </p>
-            </div>
+            {/* Role */}
+            <p
+              ref={subtitleRef}
+              className="text-lg sm:text-xl font-semibold text-foreground/85 leading-relaxed tracking-[-0.01em]"
+              style={{ opacity: 0 }}
+            >
+              Project Manager | Senior Mechanical Engineer
+            </p>
 
-            {/* CTAs */}
-            <div className="pt-1">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <JellyButton
+            {/* Tagline */}
+            <p
+              ref={taglineRef}
+              className="text-[11px] sm:text-xs font-medium text-primary/70 tracking-[0.15em] font-mono uppercase"
+              style={{ opacity: 0 }}
+            >
+              Hardware Sustainment &amp; Test Engineering
+            </p>
+
+            {/* Bio */}
+            <p
+              ref={bioRef}
+              className="text-sm sm:text-[0.9rem] text-muted-foreground leading-[1.7] max-w-xl"
+              style={{ opacity: 0 }}
+            >
+              Hardware Engineer and Project Manager who owns Meta's end-to-end EMG wearable
+              sustainment pipeline — from failure investigation and CT scanning through fixture
+              design, factory test automation, and CM transfer. Eight years spanning six product
+              generations across consumer electronics and regulated medical devices (FDA, ISO 13485,
+              EU MDR), with dual Master's degrees and expertise in NPI, DfX, SPC, and
+              cross-functional program leadership.
+            </p>
+
+            {/* CTAs with Magnetic hover + jelly button classes */}
+            <div ref={ctaRef} className="flex flex-wrap items-center gap-3 pt-1" style={{ opacity: 0 }}>
+              <Magnetic strength={0.25}>
+                <a
                   href="#contact"
-                  className="jelly-btn jelly-btn-teal btn-glow inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold no-underline hover:opacity-90 transition-opacity"
-                  onClick={() => document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' })}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className={`inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl text-sm font-semibold no-underline transition-all duration-300 active:scale-[0.98] ${
+                    jellyMode
+                      ? "jelly-btn jelly-btn-teal"
+                      : "bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02]"
+                  }`}
                 >
+                  <Mail size={15} />
                   Say Hello
-                </JellyButton>
-                <div className="flex items-center gap-3">
-                  <JellyButton
-                    href="#projects"
-                    className="jelly-btn jelly-btn-ghost inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-border text-foreground text-sm font-medium no-underline hover:bg-muted/50 hover:border-foreground/20 transition-all duration-200"
-                    onClick={() => document.querySelector('#projects')?.scrollIntoView({ behavior: 'smooth' })}
-                  >
-                    <Download size={13} />
-                    View Work
-                  </JellyButton>
-                  <JellyButton
-                    href="https://d2xsxph8kpxj0f.cloudfront.net/310519663369311609/6FS5TrUWM8ivQ45q2mHRQx/Hardik_Lukhi_Resume_ATS_d0f48f17.pdf"
-                    download="Hardik_Lukhi_Resume.pdf"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="jelly-btn jelly-btn-ghost inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-border text-foreground text-sm font-medium no-underline hover:bg-muted/50 hover:border-foreground/20 transition-all duration-200 bg-transparent"
-                  >
-                    <Download size={13} />
-                    Resume
-                  </JellyButton>
-                </div>
-              </div>
+                </a>
+              </Magnetic>
+              <Magnetic strength={0.2}>
+                <a
+                  href="#projects"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.querySelector("#projects")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium no-underline transition-all duration-200 ${
+                    jellyMode
+                      ? "jelly-btn jelly-btn-ghost"
+                      : "border border-border text-foreground hover:bg-muted/50 hover:border-foreground/20"
+                  }`}
+                >
+                  <ArrowDown size={14} />
+                  View Work
+                </a>
+              </Magnetic>
+              <Magnetic strength={0.2}>
+                <a
+                  href="https://d2xsxph8kpxj0f.cloudfront.net/310519663369311609/6FS5TrUWM8ivQ45q2mHRQx/Hardik_Lukhi_Resume_ATS_d0f48f17.pdf"
+                  download="Hardik_Lukhi_Resume.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium no-underline transition-all duration-200 ${
+                    jellyMode
+                      ? "jelly-btn jelly-btn-ghost"
+                      : "border border-border text-foreground hover:bg-muted/50 hover:border-foreground/20"
+                  }`}
+                >
+                  <Download size={14} />
+                  Resume
+                </a>
+              </Magnetic>
             </div>
 
-            {/* Company pills */}
-            <div className="flex items-center gap-2 sm:gap-2.5 pt-1 flex-wrap">
+            {/* Company pills with jelly classes */}
+            <div ref={pillsRef} className="flex items-center gap-2 sm:gap-3 pt-2 flex-wrap" style={{ opacity: 0 }}>
               {companies.map((c) => (
                 <span
                   key={c.name}
-                  className={`jelly-tag text-[10px] sm:text-xs font-medium px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl cursor-default transition-colors duration-200 ${
-                    c.active
-                      ? "bg-primary/10 text-primary border border-primary/20 shadow-sm"
-                      : "bg-card border border-border text-foreground/60 hover:text-foreground/80 hover:border-border"
+                  className={`text-[10px] sm:text-xs font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg cursor-default transition-all duration-300 ${
+                    jellyMode
+                      ? c.active
+                        ? "jelly-badge-teal"
+                        : "glass-pill text-foreground/50 hover:text-foreground/70"
+                      : c.active
+                        ? "bg-primary/10 text-primary border border-primary/20"
+                        : "bg-card/50 border border-border/50 text-foreground/50 hover:text-foreground/70"
                   }`}
                 >
                   {c.name}
@@ -343,51 +463,73 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Right column: Spline 3D robot (desktop/tablet only) */}
+          {/* ═══ Right column: Spline 3D or HeroCrossSection ═══ */}
           <div
-            className="xl:col-span-2 relative h-[340px] md:h-[380px] xl:h-[520px] hidden md:block"
-            style={{
-              opacity: 0,
-              animation: "fadeInScale 0.8s ease-out 0.3s forwards",
-            }}
+            ref={splineWrapRef}
+            className="xl:col-span-2 relative h-[340px] md:h-[400px] xl:h-[540px] hidden md:flex items-center justify-center"
+            style={{ opacity: 0 }}
           >
-            {/* Ambient glow behind Spline */}
+            {/* Ambient glow */}
             <div
               className="absolute inset-0 pointer-events-none z-0"
               style={{
                 background: `
-                  radial-gradient(ellipse 80% 60% at 50% 50%, oklch(0.55 0.18 230 / 10%) 0%, transparent 70%),
-                  radial-gradient(ellipse 60% 50% at 60% 70%, oklch(0.75 0.15 65 / 7%) 0%, transparent 60%)
+                  radial-gradient(ellipse 70% 55% at 50% 50%, oklch(0.55 0.18 230 / 8%) 0%, transparent 70%),
+                  radial-gradient(ellipse 50% 45% at 60% 70%, oklch(0.75 0.15 65 / 5%) 0%, transparent 60%)
                 `,
               }}
             />
-            {splineContent}
-            {/* Edge fade gradients */}
-            <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none z-20" />
-            <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-background via-background/50 to-transparent pointer-events-none z-20" />
-            <div className="absolute top-0 bottom-0 left-0 w-28 bg-gradient-to-r from-background via-background/50 to-transparent pointer-events-none z-20" />
-            <div className="absolute top-0 bottom-0 right-0 w-28 bg-gradient-to-l from-background via-background/50 to-transparent pointer-events-none z-20" />
+            
+            {/* HeroCrossSection in jelly mode, Spline in standard mode */}
+            {jellyMode ? (
+              <Suspense fallback={<HeroFallbackVisual />}>
+                <HeroCrossSection />
+              </Suspense>
+            ) : (
+              splineContent
+            )}
+            
+            {/* Edge fades */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background via-background/70 to-transparent pointer-events-none z-20" />
+            <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-background via-background/40 to-transparent pointer-events-none z-20" />
+            <div className="absolute top-0 bottom-0 left-0 w-20 bg-gradient-to-r from-background via-background/40 to-transparent pointer-events-none z-20" />
           </div>
         </div>
 
         {/* Scroll indicator */}
-        <div className="mt-8 sm:mt-10 xl:mt-0 xl:absolute xl:bottom-8 left-1/2 xl:-translate-x-1/2 flex flex-col items-center gap-3 mx-auto">
-          <span className="text-[10px] font-mono text-muted-foreground/30 uppercase tracking-[0.2em]">
+        <div
+          ref={scrollIndicatorRef}
+          className="mt-10 xl:mt-0 xl:absolute xl:bottom-10 left-1/2 xl:-translate-x-1/2 flex flex-col items-center gap-2 mx-auto"
+        >
+          <span className="text-[10px] font-mono text-muted-foreground/25 uppercase tracking-[0.25em]">
             Scroll
           </span>
-          <div className="flex flex-col items-center gap-1">
+          <div
+            className="w-5 h-8 rounded-full flex items-start justify-center pt-1.5"
+            style={{ border: "1.5px solid oklch(0.50 0.005 80 / 15%)" }}
+          >
             <div
-              className="w-5 h-8 rounded-full flex items-start justify-center pt-1.5"
-              style={{ border: "1.5px solid oklch(0.50 0.005 80 / 20%)" }}
-            >
-              <div
-                className="w-1.5 h-2 rounded-full animate-bounce"
-                style={{ background: "var(--jelly-teal)" }}
-              />
-            </div>
+              className="w-1 h-2 rounded-full"
+              style={{
+                background: "var(--primary)",
+                animation: "scrollBounce 2s ease-in-out infinite",
+              }}
+            />
           </div>
         </div>
       </div>
+
+      {/* Keyframes */}
+      <style>{`
+        @keyframes scrollBounce {
+          0%, 100% { transform: translateY(0); opacity: 1; }
+          50% { transform: translateY(6px); opacity: 0.4; }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
+        }
+      `}</style>
     </section>
   );
 }

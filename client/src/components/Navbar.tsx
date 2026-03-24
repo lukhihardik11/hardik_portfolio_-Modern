@@ -1,12 +1,20 @@
 /**
- * Navbar — Minimal, clean navigation bar.
- * Logo text badge, section anchor links, jelly mode toggle, theme toggle.
- * Sticky with backdrop blur on scroll.
+ * Navbar — Premium navigation with jelly material integration.
+ * 
+ * Features:
+ *   - JellyToggle anchor component (WebGPU/Canvas2D/CSS 3-tier)
+ *   - Jelly CSS classes: jelly-navbar, jelly-nav-link, jelly-logo-badge
+ *   - Magnetic hover on nav links (desktop)
+ *   - Active section tracking via IntersectionObserver
+ *   - First-visit tooltip for jelly mode
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Sun, Moon, Menu, X, Droplet } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useJellyMode } from "@/contexts/JellyModeContext";
+import { Magnetic } from "@/components/animation/Magnetic";
+
+const JellyToggle = lazy(() => import("@/components/anchors/JellyToggle"));
 
 const navLinks = [
   { label: "About", href: "#about" },
@@ -24,7 +32,7 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("");
   const { theme, toggleTheme } = useTheme();
-  const { jellyMode, toggleJellyMode } = useJellyMode();
+  const { jellyMode } = useJellyMode();
 
   // First-visit tooltip state
   const [showTooltip, setShowTooltip] = useState(false);
@@ -84,8 +92,6 @@ export function Navbar() {
     document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
   };
 
-
-
   return (
     <>
       <header
@@ -98,7 +104,9 @@ export function Navbar() {
           <nav
             className={`flex items-center justify-between px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl transition-all ${
               scrolled
-                ? "bg-background/80 backdrop-blur-lg border border-border shadow-[var(--shadow-md)]"
+                ? jellyMode
+                  ? "jelly-navbar"
+                  : "bg-background/80 backdrop-blur-lg border border-border shadow-[var(--shadow-md)]"
                 : ""
             }`}
             style={{ transitionDuration: "var(--duration-slow)" }}
@@ -112,7 +120,9 @@ export function Navbar() {
               }}
               className="flex items-center gap-2 no-underline shrink-0"
             >
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-primary flex items-center justify-center text-primary-foreground text-[10px] sm:text-xs font-bold">
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center text-primary-foreground text-[10px] sm:text-xs font-bold ${
+                jellyMode ? "jelly-logo-badge" : "bg-primary"
+              }`}>
                 HL
               </div>
               <span className="text-sm font-semibold text-foreground tracking-tight hidden sm:block">
@@ -125,39 +135,39 @@ export function Navbar() {
               {navLinks.map((link) => {
                 const isActive = activeSection === link.href.slice(1);
                 return (
-                  <button
-                    key={link.href}
-                    onClick={() => nav(link.href)}
-                    className={`px-3.5 py-1.5 text-xs font-semibold rounded-full border-none outline-none transition-colors cursor-pointer ${
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground"
-                    }`}
-                    style={{ transitionDuration: "var(--duration-fast)" }}
-                  >
-                    {link.label}
-                  </button>
+                  <Magnetic key={link.href} strength={0.15}>
+                    <button
+                      onClick={() => nav(link.href)}
+                      className={`jelly-nav-link px-3.5 py-1.5 text-xs font-semibold rounded-full border-none outline-none transition-colors cursor-pointer ${
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground"
+                      }`}
+                      style={{ transitionDuration: "var(--duration-fast)" }}
+                    >
+                      {link.label}
+                    </button>
+                  </Magnetic>
                 );
               })}
             </div>
 
             {/* Right side: jelly toggle + theme toggle + hamburger */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              {/* Jelly mode toggle */}
-              <div className="relative flex items-center">
-                <button
-                  onClick={() => { dismissTooltip(); toggleJellyMode(); }}
-                  className={`p-2 rounded-full transition-colors border no-jelly ${
-                    jellyMode
-                      ? "bg-primary/10 text-primary border-primary/20"
-                      : "text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground border-transparent hover:border-border"
-                  }`}
-                  style={{ transitionDuration: "var(--duration-fast)" }}
-                  aria-label={jellyMode ? "Disable jelly mode" : "Enable jelly mode"}
-                  aria-pressed={jellyMode}
+              {/* Jelly mode toggle — premium anchor component */}
+              <div className="relative flex items-center" onClick={dismissTooltip}>
+                <Suspense
+                  fallback={
+                    <button
+                      className="p-2 rounded-full text-muted-foreground no-jelly"
+                      aria-label="Loading jelly toggle"
+                    >
+                      <Droplet className="w-4 h-4" />
+                    </button>
+                  }
                 >
-                  <Droplet className="w-4 h-4" />
-                </button>
+                  <JellyToggle />
+                </Suspense>
 
                 {/* First-visit tooltip — subtle, non-blocking, auto-dismisses */}
                 {showTooltip && (
@@ -205,7 +215,9 @@ export function Navbar() {
 
       {/* Mobile overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden bg-background/95 backdrop-blur-lg">
+        <div className={`fixed inset-0 z-40 lg:hidden ${
+          jellyMode ? "jelly-mobile-overlay" : "bg-background/95 backdrop-blur-lg"
+        }`}>
           <div className="flex flex-col items-center justify-center h-full gap-5">
             {navLinks.map((link) => (
               <button

@@ -1,14 +1,22 @@
 /**
- * SkillsSection — CSS progress bars with JellyWrapper spring physics.
- * GSAP: skill bar fill animation on scroll, staggered card reveal.
+ * SkillsSection — Premium GSAP-powered skills display.
+ * 
+ * Anti-AI-made: Instrument Serif italic heading, expo.out easing,
+ * varied card border-radius, authored spacing.
  */
-import { useScrollReveal } from "@/hooks/useScrollReveal";
-import { JellyWrapper } from "@/components/JellyWrapper";
+import { useRef, useEffect } from "react";
+import { TextReveal } from "@/components/animation/TextReveal";
+import { ScrollReveal } from "@/components/animation/ScrollReveal";
+import { useAnimation } from "@/components/animation/AnimationProvider";
+import { useJellyMode } from "@/contexts/JellyModeContext";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 const skillCategories = [
   {
     category: "Engineering & Design",
     number: "01",
+    color: "teal" as const,
     skills: [
       { name: "Product Design & DfX", level: 95 },
       { name: "SolidWorks / NX CAD", level: 92 },
@@ -22,6 +30,7 @@ const skillCategories = [
   {
     category: "Quality & Compliance",
     number: "02",
+    color: "amber" as const,
     skills: [
       { name: "Failure Analysis / Root Cause", level: 96 },
       { name: "Six Sigma / DOE", level: 88 },
@@ -34,8 +43,9 @@ const skillCategories = [
   {
     category: "Manufacturing & Test",
     number: "03",
+    color: "teal" as const,
     skills: [
-      { name: "NPI (EVT \u2192 PVT)", level: 93 },
+      { name: "NPI (EVT → PVT)", level: 93 },
       { name: "Test Automation", level: 90 },
       { name: "PCB Design", level: 85 },
       { name: "CM Transfer & BOM Mgmt", level: 88 },
@@ -46,6 +56,7 @@ const skillCategories = [
   {
     category: "Software & Project Mgmt",
     number: "04",
+    color: "amber" as const,
     skills: [
       { name: "Python Scripting", level: 88 },
       { name: "Minitab / MATLAB", level: 85 },
@@ -59,46 +70,145 @@ const skillCategories = [
 ];
 
 export function SkillsSection() {
-  const sectionRef = useScrollReveal<HTMLDivElement>({ animateSkillBars: true });
+  const gridRef = useRef<HTMLDivElement>(null);
+  const { reducedMotion, isDesktop } = useAnimation();
+  const { jellyMode } = useJellyMode();
+
+  useEffect(() => {
+    if (reducedMotion) return;
+    const ctx = gsap.context(() => {
+      if (!gridRef.current) return;
+
+      const cards = gridRef.current.querySelectorAll("[data-skill-card]");
+      gsap.set(cards, { opacity: 0, y: 50, scale: 0.96 });
+      ScrollTrigger.batch(cards, {
+        interval: 0.1,
+        batchMax: 2,
+        onEnter: (batch) =>
+          gsap.to(batch, {
+            opacity: 1, y: 0, scale: 1,
+            stagger: { each: 0.15, from: "start" },
+            duration: 1, ease: "expo.out", overwrite: true,
+          }),
+        once: true,
+        start: "20px bottom",
+      });
+
+      const bars = gridRef.current.querySelectorAll("[data-skill-bar]");
+      bars.forEach((bar) => {
+        const targetWidth = (bar as HTMLElement).dataset.skillBar || "0";
+        gsap.set(bar, { width: "0%" });
+        gsap.to(bar, {
+          width: `${targetWidth}%`,
+          duration: 1.4,
+          ease: "expo.out",
+          scrollTrigger: { trigger: bar, start: "top 90%", once: true },
+        });
+      });
+
+      const counters = gridRef.current.querySelectorAll("[data-skill-counter]");
+      counters.forEach((counter) => {
+        const target = parseInt((counter as HTMLElement).dataset.skillCounter || "0", 10);
+        const obj = { val: 0 };
+        gsap.to(obj, {
+          val: target,
+          snap: { val: 1 },
+          duration: 1.8,
+          ease: "expo.out",
+          scrollTrigger: { trigger: counter, start: "top 90%", once: true },
+          onUpdate: () => {
+            (counter as HTMLElement).textContent = `${Math.round(obj.val)}%`;
+          },
+        });
+      });
+    });
+    return () => ctx.revert();
+  }, [reducedMotion, isDesktop]);
+
+  const cardRadii = [
+    "1.25rem 0.75rem 0.75rem 1rem",
+    "0.75rem 1.25rem 1rem 0.75rem",
+    "1rem 0.75rem 1.25rem 0.75rem",
+    "0.75rem 1rem 0.75rem 1.25rem",
+  ];
 
   return (
-    <div ref={sectionRef}>
+    <div className="jelly-section-bg relative">
       {/* Section header */}
-      <div className="mb-14" data-reveal>
-        <p className="section-label-accent text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3">Skills</p>
-        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground max-w-xl">Technical proficiency</h2>
+      <div className="mb-14 lg:mb-20">
+        <ScrollReveal mode="up" distance={30} duration={0.7}>
+          <p className={`text-[11px] font-mono uppercase tracking-[0.2em] mb-5 ${
+            jellyMode ? "jelly-section-label text-primary/60" : "text-muted-foreground/60"
+          }`}>
+            <span className="inline-block w-6 h-px bg-current mr-3 align-middle" />
+            Skills
+          </p>
+        </ScrollReveal>
+        <TextReveal mode="lines" duration={1} stagger={0.1}>
+          <h2 className={`font-display text-4xl sm:text-5xl md:text-[3.5rem] tracking-[-0.03em] leading-[1.05] max-w-2xl ${
+            jellyMode ? "jelly-section-title" : "text-foreground"
+          }`} style={{ fontStyle: "italic", fontWeight: 400 }}>
+            Technical proficiency
+          </h2>
+        </TextReveal>
       </div>
 
-      {/* Category cards — 2-column grid */}
-      <div className="grid sm:grid-cols-2 gap-3 sm:gap-5">
-        {skillCategories.map((cat) => (
-          <JellyWrapper key={cat.number} intensity="soft" className="jelly-card bg-card text-card-foreground rounded-xl border border-border dark:border-border/50 p-6 card-polished">
+      {/* Category cards */}
+      <div ref={gridRef} className="grid sm:grid-cols-2 gap-4 sm:gap-5">
+        {skillCategories.map((cat, i) => (
+          <div
+            key={cat.number}
+            data-skill-card
+            className={`group transition-all duration-400 ${
+              jellyMode
+                ? "jelly-card p-7"
+                : "bg-card/30 border border-border/30 p-7 hover:bg-card/60 hover:border-border/50 hover:shadow-lg hover:shadow-primary/5"
+            }`}
+            style={{ borderRadius: jellyMode ? undefined : cardRadii[i % cardRadii.length] }}
+          >
             {/* Category header */}
-            <div className="flex items-center gap-3 mb-5 relative z-[2]">
-              <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-mono font-bold text-primary shrink-0">
+            <div className="flex items-center gap-3 mb-6">
+              <span className={`w-10 h-10 flex items-center justify-center text-[10px] font-mono font-bold shrink-0 transition-colors duration-300 ${
+                jellyMode
+                  ? `jelly-icon-box jelly-icon-box-${cat.color}`
+                  : "bg-primary/6 text-primary group-hover:bg-primary/10"
+              }`} style={{ borderRadius: "0.75rem" }}>
                 {cat.number}
               </span>
-              <h3 className="text-sm font-semibold text-foreground">{cat.category}</h3>
+              <h3 className="text-sm font-semibold text-foreground tracking-[-0.01em]">{cat.category}</h3>
             </div>
 
             {/* Skill bars */}
-            <div className="space-y-3 relative z-[2]">
+            <div className="space-y-3.5">
               {cat.skills.map((skill) => (
                 <div key={skill.name}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] text-foreground/80">{skill.name}</span>
-                    <span className="text-[10px] font-mono text-muted-foreground/50">{skill.level}%</span>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] text-foreground/75">{skill.name}</span>
+                    <span
+                      className="text-[10px] font-mono text-muted-foreground/40 tabular-nums"
+                      data-skill-counter={skill.level}
+                    >
+                      {reducedMotion ? `${skill.level}%` : "0%"}
+                    </span>
                   </div>
-                  <div className="h-2 rounded-full bg-muted/60 overflow-hidden">
+                  <div className={`h-[5px] rounded-full overflow-hidden ${
+                    jellyMode ? "bg-foreground/5" : "bg-muted/50"
+                  }`}>
                     <div
-                      className="h-full skill-bar-fill jelly-skill-bar"
-                      style={{ width: `${skill.level}%` }}
+                      className={`h-full rounded-full ${jellyMode ? "jelly-skill-bar" : ""}`}
+                      data-skill-bar={skill.level}
+                      style={{
+                        background: jellyMode
+                          ? undefined
+                          : `linear-gradient(90deg, oklch(from var(--primary) l c h / 40%) 0%, oklch(from var(--primary) l c h / 75%) 100%)`,
+                        width: reducedMotion ? `${skill.level}%` : "0%",
+                      }}
                     />
                   </div>
                 </div>
               ))}
             </div>
-          </JellyWrapper>
+          </div>
         ))}
       </div>
     </div>

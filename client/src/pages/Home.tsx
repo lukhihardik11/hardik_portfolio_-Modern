@@ -1,9 +1,11 @@
 /**
  * Home.tsx — Full portfolio page composition.
- * All sections with SignalDividers and PhilosophySection.
+ * 
+ * Anti-AI-made: Asymmetric section spacing — each section has intentionally
+ * different vertical rhythm to avoid the "computed" feel of uniform padding.
+ * Alternating backgrounds use subtle tonal shifts, not identical patterns.
  */
 import { Navbar } from "@/components/Navbar";
-import { Section } from "@/components/Section";
 import { HeroSection } from "@/components/HeroSection";
 import { AboutSection } from "@/components/AboutSection";
 import { ExperienceSection } from "@/components/ExperienceSection";
@@ -12,9 +14,11 @@ import { SkillsSection } from "@/components/SkillsSection";
 import { EducationSection } from "@/components/EducationSection";
 import { ContactSection, Footer } from "@/components/ContactSection";
 import { PhilosophySection } from "@/components/PhilosophySection";
-import { SignalDivider } from "@/components/SignalDivider";
+import { useJellyMode } from "@/contexts/JellyModeContext";
 
 export default function Home() {
+  const { jellyMode } = useJellyMode();
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -22,49 +26,68 @@ export default function Home() {
       {/* Spacer for fixed navbar */}
       <div className="h-16" />
 
-      <Section id="hero" jellyBg>
+      {/* Hero — no padding, self-contained */}
+      <section id="hero" className="scroll-mt-20">
         <HeroSection />
-      </Section>
+      </section>
 
-      <SignalDivider />
+      {/* About — generous top breathing room, tighter bottom */}
+      <section
+        id="about"
+        className={`scroll-mt-20 pt-24 pb-16 lg:pt-36 lg:pb-20 ${
+          jellyMode ? "bg-foreground/[0.015]" : "bg-muted/20"
+        }`}
+      >
+        <div className="container">
+          <AboutSection />
+        </div>
+      </section>
 
-      <Section id="about" className="bg-muted/40" jellyBg>
-        <AboutSection />
-      </Section>
+      {/* Experience — asymmetric: more top, less bottom */}
+      <section id="experience" className="scroll-mt-20 pt-20 pb-14 lg:pt-28 lg:pb-18">
+        <div className="container">
+          <ExperienceSection />
+        </div>
+      </section>
 
-      <SignalDivider />
-
-      <Section id="experience" jellyBg>
-        <ExperienceSection />
-      </Section>
-
-      <SignalDivider />
-
+      {/* Philosophy — cinematic interlude, self-contained */}
       <PhilosophySection />
 
-      <SignalDivider />
-
-      <Section id="projects" className="bg-muted/40" jellyBg>
+      {/* Projects — horizontal scroll, self-contained padding */}
+      <section id="projects" className="scroll-mt-20 pt-20 pb-24 lg:pt-28 lg:pb-32">
         <ProjectsSection />
-      </Section>
+      </section>
 
-      <SignalDivider />
+      {/* Skills — tighter rhythm, alt background */}
+      <section
+        id="skills"
+        className={`scroll-mt-20 pt-18 pb-20 lg:pt-24 lg:pb-28 ${
+          jellyMode ? "bg-foreground/[0.015]" : "bg-muted/20"
+        }`}
+      >
+        <div className="container">
+          <SkillsSection />
+        </div>
+      </section>
 
-      <Section id="skills" jellyBg>
-        <SkillsSection />
-      </Section>
+      {/* Education — generous breathing */}
+      <section id="education" className="scroll-mt-20 pt-22 pb-16 lg:pt-30 lg:pb-22">
+        <div className="container">
+          <EducationSection />
+        </div>
+      </section>
 
-      <SignalDivider />
-
-      <Section id="education" className="bg-muted/40" jellyBg>
-        <EducationSection />
-      </Section>
-
-      <SignalDivider />
-
-      <Section id="contact" jellyBg>
-        <ContactSection />
-      </Section>
+      {/* Contact — alt background, generous */}
+      <section
+        id="contact"
+        className={`scroll-mt-20 pt-24 pb-20 lg:pt-32 lg:pb-28 ${
+          jellyMode ? "bg-foreground/[0.015]" : "bg-muted/20"
+        }`}
+      >
+        <div className="container">
+          <ContactSection />
+        </div>
+      </section>
 
       <Footer />
     </div>

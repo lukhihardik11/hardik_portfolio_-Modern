@@ -1,7 +1,7 @@
 /**
  * App.tsx — Root application shell.
- * Provider stack: ErrorBoundary → ThemeProvider → JellyModeProvider → TooltipProvider → Router
- * Global layers: JellyBackground (metaballs + cursor), ScrollProgress
+ * Provider stack: ErrorBoundary → ThemeProvider → JellyModeProvider → AnimationProvider → TooltipProvider → Router
+ * Global layers: CustomCursor (desktop only), ScrollProgress
  * Route wrapper: PageTransition (GSAP overlay slide)
  */
 import { Toaster } from "@/components/ui/sonner";
@@ -11,7 +11,8 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { JellyModeProvider } from "./contexts/JellyModeContext";
-import { JellyBackground } from "./components/JellyBackground";
+import { AnimationProvider } from "./components/animation/AnimationProvider";
+import { CustomCursor } from "./components/animation/CustomCursor";
 import { ScrollProgress } from "./components/ScrollProgress";
 import PageTransition from "./components/PageTransition";
 import Home from "./pages/Home";
@@ -35,12 +36,14 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <JellyModeProvider>
-          <TooltipProvider>
-            <Toaster />
-            <ScrollProgress />
-            <JellyBackground />
-            <Router />
-          </TooltipProvider>
+          <AnimationProvider>
+            <TooltipProvider>
+              <Toaster />
+              <ScrollProgress />
+              <CustomCursor />
+              <Router />
+            </TooltipProvider>
+          </AnimationProvider>
         </JellyModeProvider>
       </ThemeProvider>
     </ErrorBoundary>

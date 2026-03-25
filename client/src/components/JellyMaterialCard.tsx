@@ -119,6 +119,21 @@ function JellyMaterialCardInner({
     s.rotY = stepSpring(s.rotY, t.rotY, TILT_SPRING, dt);
     s.translateZ = stepSpring(s.translateZ, t.translateZ, TILT_SPRING, dt);
 
+    // CLAMP all spring values to prevent runaway rotation/scaling
+    // Without clamping, idle wobble impulses can accumulate and flip cards 180°
+    const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+    s.squashX.value = clamp(s.squashX.value, -2, 2);
+    s.squashZ.value = clamp(s.squashZ.value, -2, 2);
+    s.wiggleX.value = clamp(s.wiggleX.value, -4, 4); // max ±12° rotateZ
+    s.rotX.value = clamp(s.rotX.value, -25, 25);
+    s.rotY.value = clamp(s.rotY.value, -25, 25);
+    // Also clamp velocities to prevent explosive accumulation
+    s.squashX.velocity = clamp(s.squashX.velocity, -30, 30);
+    s.squashZ.velocity = clamp(s.squashZ.velocity, -30, 30);
+    s.wiggleX.velocity = clamp(s.wiggleX.velocity, -30, 30);
+    s.rotX.velocity = clamp(s.rotX.velocity, -60, 60);
+    s.rotY.velocity = clamp(s.rotY.velocity, -60, 60);
+
     // Map reference channels to CSS transforms
     // squashX → scaleX offset, squashZ → scaleY offset (orthogonal compression)
     const scaleX = 1 + s.squashX.value * 0.15;
@@ -161,32 +176,34 @@ function JellyMaterialCardInner({
   const triggerWobble = useCallback((mult = 1) => {
     if (prefersReducedMotion) return;
     const s = springRef.current;
-    // Reference-matched overshoot impulse pattern:
-    // squashX.velocity = -5, squashZ.velocity = 5, wiggleX.velocity = ±10
-    s.squashX.velocity += -5 * mult;
-    s.squashZ.velocity += 5 * mult;
-    s.wiggleX.velocity += (Math.random() > 0.5 ? 10 : -10) * mult;
-    // Also nudge tilt for visual interest
-    s.rotX.velocity += (8 + Math.random() * 6) * mult;
-    s.translateZ.velocity += 15 * mult;
+    // Reference-matched overshoot impulse pattern (scaled down to prevent flipping):
+    s.squashX.velocity += -3 * mult;
+    s.squashZ.velocity += 3 * mult;
+    s.wiggleX.velocity += (Math.random() > 0.5 ? 5 : -5) * mult;
+    // Moderate tilt nudge for visual interest
+    s.rotX.velocity += (4 + Math.random() * 3) * mult;
+    s.translateZ.velocity += 10 * mult;
     startAnimation();
   }, [prefersReducedMotion, startAnimation]);
 
-  // Idle wobble
+  // Idle wobble — only nudge when spring is near rest to prevent accumulation
   useEffect(() => {
     if (!jellyMode || prefersReducedMotion || !isInView) return;
     let phase = 0;
     const interval = setInterval(() => {
       phase += 1;
       const s = springRef.current;
-      // Gentle idle nudges using reference channels
-      s.squashX.velocity += Math.sin(phase * 0.6) * 0.4;
-      s.squashZ.velocity += Math.cos(phase * 0.9) * 0.3;
-      s.wiggleX.velocity += Math.sin(phase * 1.1) * 0.5;
-      s.rotX.velocity += Math.sin(phase * 0.4) * 0.6;
-      s.rotY.velocity += Math.cos(phase * 0.7) * 0.5;
+      // Only apply idle nudges if the spring is near rest (prevents runaway accumulation)
+      const isNearRest = Math.abs(s.wiggleX.value) < 1 && Math.abs(s.squashX.value) < 0.5;
+      if (!isNearRest) return;
+      // Very gentle idle nudges
+      s.squashX.velocity += Math.sin(phase * 0.6) * 0.2;
+      s.squashZ.velocity += Math.cos(phase * 0.9) * 0.15;
+      s.wiggleX.velocity += Math.sin(phase * 1.1) * 0.25;
+      s.rotX.velocity += Math.sin(phase * 0.4) * 0.3;
+      s.rotY.velocity += Math.cos(phase * 0.7) * 0.25;
       startAnimation();
-    }, 2000);
+    }, 3000);
     return () => clearInterval(interval);
   }, [jellyMode, prefersReducedMotion, isInView, startAnimation]);
 
@@ -203,7 +220,7 @@ function JellyMaterialCardInner({
             setHasEnteredView(true);
             const rect = el.getBoundingClientRect();
             const delay = (rect.left / window.innerWidth) * 200;
-            setTimeout(() => triggerWobble(1.5), delay);
+            setTimeout(() => triggerWobble(1.0), delay);
           }
         });
       },
@@ -273,12 +290,12 @@ function JellyMaterialCardInner({
   const handlePointerUp = useCallback(() => {
     if (!jellyMode || prefersReducedMotion) return;
     targetRef.current.translateZ = hover ? 12 : 0;
-    // Reference: overshoot impulse on release
+    // Overshoot impulse on release (clamped to prevent flipping)
     const s = springRef.current;
-    s.squashX.velocity = -5;
-    s.squashZ.velocity = 5;
-    s.wiggleX.velocity = (Math.random() > 0.5 ? -10 : 10);
-    s.translateZ.velocity += 15;
+    s.squashX.velocity = -3;
+    s.squashZ.velocity = 3;
+    s.wiggleX.velocity = (Math.random() > 0.5 ? -5 : 5);
+    s.translateZ.velocity += 10;
     startAnimation();
   }, [jellyMode, prefersReducedMotion, hover, startAnimation]);
 
@@ -289,9 +306,12 @@ function JellyMaterialCardInner({
     return (
       <div
         ref={containerRef}
-        className={`relative overflow-hidden bg-card/60 backdrop-blur-md border border-border/30 shadow-sm hover:bg-card/80 hover:border-border/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-500 ${className}`}
+        className={`relative overflow-hidden bg-card/60 backdrop-blur-md border border-border/30 shadow-sm hover:bg-card/80 hover:border-border/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-500 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary/70 ${className}`}
         style={{ borderRadius: borderRadius || "1.25rem", ...style }}
         onClick={onClick}
+        tabIndex={onClick ? 0 : undefined}
+        role={onClick ? "button" : undefined}
+        onKeyDown={onClick ? (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
         {...rest}
       >
         {children}
@@ -513,6 +533,9 @@ function JellyMaterialCardInner({
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onClick={onClick}
+      tabIndex={onClick ? 0 : undefined}
+      role={onClick ? "button" : undefined}
+      onKeyDown={onClick ? (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
       {...rest}
     >
       {/* 3D Cube Container */}

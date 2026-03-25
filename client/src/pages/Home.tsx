@@ -26,6 +26,7 @@ export default function Home() {
       {/* Spacer for fixed navbar */}
       <div className="h-16" />
 
+      <main>
       {/* Hero — no padding, self-contained */}
       <div className="scroll-mt-20">
         <HeroSection />
@@ -88,6 +89,8 @@ export default function Home() {
           <ContactSection />
         </div>
       </section>
+
+      </main>
 
       <Footer />
     </div>

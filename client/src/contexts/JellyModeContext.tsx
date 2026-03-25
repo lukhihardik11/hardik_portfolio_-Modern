@@ -2,7 +2,7 @@
  * JellyModeContext — Manages the "Jelly Mode" toggle state.
  *
  * Behavioral contract:
- * - Default: OFF (clean, elegant design with minimal animations).
+ * - Default: ON (jelly is the signature feature — new visitors see it first).
  * - ON: Enhanced jelly-like spring physics on all interactive elements,
  *   translucent glassmorphism surfaces, wobbly hover effects, bouncy transitions.
  * - DOM: adds/removes "jelly-mode" class on document.documentElement.
@@ -25,10 +25,11 @@ export function JellyModeProvider({ children }: { children: React.ReactNode }) {
   const [jellyMode, setJellyMode] = useState(() => {
     try {
       const stored = localStorage.getItem(JELLY_MODE_KEY);
-      // Default to OFF for new visitors (stored === null)
+      // Default to ON for new visitors — jelly is the signature feature
+      if (stored === null) return true;
       return stored === 'true';
     } catch {
-      return false;
+      return true;
     }
   });
 

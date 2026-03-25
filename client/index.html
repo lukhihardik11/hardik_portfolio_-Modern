@@ -3,9 +3,9 @@
 
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Hardik Lukhi — Project Manager | Senior Mechanical Engineer</title>
     <meta name="description" content="Hardware Engineer, Project Manager, and Test Engineering leader who owns Meta's end-to-end EMG wearable sustainment pipeline. Eight years spanning six product generations across consumer electronics and regulated medical devices, with dual Master's degrees and expertise in NPI, DfX, SPC, and cross-functional program leadership." />
 
@@ -34,8 +34,9 @@
           if (t === 'dark') document.documentElement.classList.add('dark');
           else document.documentElement.classList.remove('dark');
           // Jelly mode flash prevention: apply stored jelly state before React mounts
+          // Default to ON for new visitors (null = never set = first visit)
           var j = localStorage.getItem('jelly-mode');
-          if (j === 'true') document.documentElement.classList.add('jelly-mode');
+          if (j === null || j === 'true') document.documentElement.classList.add('jelly-mode');
         } catch(e) {
           document.documentElement.classList.remove('dark');
         }

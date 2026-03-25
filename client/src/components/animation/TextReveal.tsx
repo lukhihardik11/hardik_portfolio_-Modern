@@ -1,27 +1,26 @@
 /**
  * TextReveal — GSAP SplitText wrapper for premium text entrance animations.
  * 
- * Supports multiple reveal modes:
- *   - "lines": lines slide up from behind a mask (Apple-style)
- *   - "words": words fade + rise with stagger
- *   - "chars": characters animate individually (hero headlines)
- *   - "fade": simple opacity cascade per line (scroll-linked)
- * 
- * FIX for "removeChild" error:
+ * CRITICAL FIX for "removeChild" error:
+ * ─────────────────────────────────────
  * SplitText replaces React-managed text nodes with character/word/line <div>s.
- * When a parent re-renders (e.g., jellyMode toggle changes CSS classes on children),
- * React tries to reconcile the stale virtual DOM against the SplitText-modified real DOM
- * and fails with "The node to be removed is not a child of this node."
+ * When jellyMode toggles, React re-renders the parent section, which re-renders
+ * the <h2> child inside TextReveal. React tries to reconcile the new virtual DOM
+ * against the SplitText-modified real DOM and fails with:
+ *   "Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node."
  * 
- * Solution: Render children normally but use a `key` that includes a "split generation"
- * counter. When the effect runs SplitText, it doesn't change the key, so React doesn't
- * try to reconcile. When the effect cleanup reverts SplitText (restoring original DOM),
- * the next render will work fine. Additionally, we suppress React's hydration warnings
- * on the container since SplitText will modify its innerHTML.
+ * Solution: Use a two-container approach:
+ *   1. A hidden container renders React children normally (for className updates)
+ *   2. A visible container uses ref-managed innerHTML that SplitText can safely modify
+ *   When React re-renders (e.g., jellyMode toggle), the hidden container updates,
+ *   and we sync className changes to the visible container via DOM manipulation —
+ *   but only if SplitText hasn't run yet. Once SplitText has split the text,
+ *   className changes are applied directly to the visible element without touching innerHTML.
  * 
- * Automatically respects prefers-reduced-motion and touch device tier.
+ * Supports modes: "lines", "words", "chars", "fade"
+ * Respects prefers-reduced-motion and touch device tier.
  */
-import React, { useRef, useEffect, useCallback, type ReactNode, type CSSProperties } from "react";
+import React, { useRef, useEffect, useState, type ReactNode, type CSSProperties } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
@@ -30,19 +29,12 @@ import { useAnimation } from "./AnimationProvider";
 interface TextRevealProps {
   children: ReactNode;
   mode?: "lines" | "words" | "chars" | "fade";
-  /** Delay in seconds before animation starts */
   delay?: number;
-  /** Duration per element */
   duration?: number;
-  /** Stagger between elements */
   stagger?: number;
-  /** Whether to use scroll-linked animation */
   scrub?: boolean | number;
-  /** ScrollTrigger start position */
   start?: string;
-  /** Additional className */
   className?: string;
-  /** Tag to render */
   as?: keyof React.JSX.IntrinsicElements;
   style?: CSSProperties;
 }
@@ -59,31 +51,49 @@ export function TextReveal({
   as: Tag = "div",
   style,
 }: TextRevealProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const visibleRef = useRef<HTMLDivElement>(null);
   const splitRef = useRef<SplitText | null>(null);
-  const hasBeenSplit = useRef(false);
+  const isSplit = useRef(false);
+  const initialHTMLSet = useRef(false);
   const { reducedMotion } = useAnimation();
 
-  // Store the original innerHTML before SplitText modifies it
-  const originalHTML = useRef<string>("");
+  // We use a hidden render target to capture React's rendered HTML
+  const hiddenRef = useRef<HTMLDivElement>(null);
 
+  // After first mount, capture the rendered HTML from the hidden container
+  // and inject it into the visible container via innerHTML (opaque to React)
   useEffect(() => {
-    const el = containerRef.current;
+    if (!hiddenRef.current || !visibleRef.current) return;
+    if (!initialHTMLSet.current) {
+      visibleRef.current.innerHTML = hiddenRef.current.innerHTML;
+      initialHTMLSet.current = true;
+    } else if (!isSplit.current) {
+      // If not yet split, we can safely update innerHTML
+      visibleRef.current.innerHTML = hiddenRef.current.innerHTML;
+    } else {
+      // Already split — only sync className changes on the first child element
+      const hiddenChild = hiddenRef.current.querySelector('*');
+      const visibleChild = visibleRef.current.querySelector(':scope > *');
+      if (hiddenChild && visibleChild) {
+        visibleChild.className = hiddenChild.className;
+      }
+    }
+  });
+
+  // SplitText effect — runs once on mount, operates on the visible container
+  useEffect(() => {
+    const el = visibleRef.current;
     if (!el || reducedMotion) return;
 
     let cancelled = false;
 
-    // Small delay to ensure React has finished rendering children
     const raf = requestAnimationFrame(() => {
       document.fonts.ready.then(() => {
-        if (cancelled || !containerRef.current) return;
-
-        // Save original HTML so we can restore it before React reconciles
-        originalHTML.current = containerRef.current.innerHTML;
+        if (cancelled || !visibleRef.current) return;
 
         const splitType = mode === "fade" ? "lines" : mode;
         
-        const split = SplitText.create(containerRef.current, {
+        const split = SplitText.create(visibleRef.current, {
           type: splitType,
           mask: mode === "lines" ? "lines" : undefined,
           autoSplit: true,
@@ -101,49 +111,33 @@ export function TextReveal({
 
             if (scrub) {
               animProps.scrollTrigger = {
-                trigger: containerRef.current,
+                trigger: visibleRef.current,
                 start,
                 end: "top 30%",
                 scrub: typeof scrub === "number" ? scrub : 1,
               };
             } else {
               animProps.scrollTrigger = {
-                trigger: containerRef.current,
+                trigger: visibleRef.current,
                 start,
                 once: true,
               };
             }
 
             if (mode === "lines") {
-              gsap.from(targets, {
-                yPercent: 110,
-                opacity: 0,
-                ...animProps,
-              });
+              gsap.from(targets, { yPercent: 110, opacity: 0, ...animProps });
             } else if (mode === "fade") {
-              gsap.from(targets, {
-                opacity: 0.15,
-                ...animProps,
-              });
+              gsap.from(targets, { opacity: 0.15, ...animProps });
             } else if (mode === "words") {
-              gsap.from(targets, {
-                y: 30,
-                opacity: 0,
-                ...animProps,
-              });
+              gsap.from(targets, { y: 30, opacity: 0, ...animProps });
             } else {
-              gsap.from(targets, {
-                y: 50,
-                opacity: 0,
-                rotateX: -40,
-                ...animProps,
-              });
+              gsap.from(targets, { y: 50, opacity: 0, rotateX: -40, ...animProps });
             }
           },
         });
 
         splitRef.current = split;
-        hasBeenSplit.current = true;
+        isSplit.current = true;
       });
     });
 
@@ -151,50 +145,45 @@ export function TextReveal({
       cancelled = true;
       cancelAnimationFrame(raf);
       
-      // Kill any ScrollTriggers associated with this element FIRST
-      if (containerRef.current) {
+      // Kill ScrollTriggers associated with this element
+      if (visibleRef.current) {
         ScrollTrigger.getAll().forEach(st => {
-          if (st.trigger === containerRef.current) {
+          if (st.trigger === visibleRef.current) {
             st.kill();
           }
         });
       }
       
-      // Revert SplitText to restore original DOM before React reconciles
+      // Revert SplitText to restore original DOM
       if (splitRef.current) {
         splitRef.current.revert();
         splitRef.current = null;
       }
-      
-      // If SplitText.revert() didn't fully restore (edge case), manually restore
-      if (hasBeenSplit.current && containerRef.current && originalHTML.current) {
-        try {
-          // Check if the DOM is still in a split state by looking for SplitText wrappers
-          const hasSplitWrappers = containerRef.current.querySelector('[data-split-text]') || 
-            containerRef.current.querySelector('.split-text');
-          if (hasSplitWrappers) {
-            containerRef.current.innerHTML = originalHTML.current;
-          }
-        } catch (e) {
-          // Silently handle - the component is unmounting anyway
-        }
-      }
-      
-      hasBeenSplit.current = false;
+      isSplit.current = false;
+      initialHTMLSet.current = false;
     };
   }, [mode, delay, duration, stagger, scrub, start, reducedMotion]);
 
   const Component = Tag as any;
   
-  // Use suppressHydrationWarning to prevent React warnings when SplitText modifies innerHTML
   return (
-    <Component 
-      ref={containerRef} 
-      className={className} 
-      style={style}
-      suppressHydrationWarning
-    >
-      {children}
-    </Component>
+    <>
+      {/* Hidden container: React renders children here normally.
+          This allows React to reconcile freely without touching the SplitText DOM. */}
+      <div
+        ref={hiddenRef}
+        style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', pointerEvents: 'none', opacity: 0 }}
+        aria-hidden="true"
+      >
+        {children}
+      </div>
+      {/* Visible container: innerHTML is set via ref, opaque to React's reconciler.
+          SplitText safely modifies this DOM without conflicting with React. */}
+      <Component 
+        ref={visibleRef} 
+        className={className} 
+        style={style}
+      />
+    </>
   );
 }

@@ -1,15 +1,19 @@
 /**
- * JellyMaterialCard — True 3D jelly cube with GPU-accelerated spring physics.
+ * JellyMaterialCard — Translucent 3D jelly cube with GPU-accelerated spring physics.
  *
- * Key improvements:
- * - Default 3° X-tilt so bottom edge is ALWAYS visible (thickness feel)
- * - Increased depth (24px) for more pronounced 3D slab
- * - Visible gel shadow strip below card (CSS pseudo-element backup)
- * - Idle wobble breathing animation when in view
- * - More dramatic spring physics with lower damping
- * - Continuous subtle jiggle on scroll
+ * Design: "A 1-4cm thick slab of colored gel viewed from a slight angle on a desk"
  *
- * GPU: Only transform & opacity are animated (compositor-only).
+ * v4 changes:
+ * - JELLY_DEPTH increased to 56px for unmistakable 3D thickness
+ * - Resting tilt 7° X + 3.5° Y → bottom + right side always prominently visible
+ * - Perspective lowered to 650px → more dramatic 3D foreshortening
+ * - Organic border-radius with per-corner variation + slight SVG-like bulge
+ * - Stronger wobble: lower damping (5.0), higher velocity injections
+ * - Continuous idle "breathing" wobble with multi-frequency Lissajous pattern
+ * - Side faces have inner gel glow + gradient for convincing depth
+ * - Fallback thickness strips doubled in size for non-3D browsers
+ *
+ * GPU: Only transform & opacity animated (compositor-only properties).
  */
 import { useRef, useCallback, memo, useState, useEffect } from "react";
 import { useJellyMode } from "@/contexts/JellyModeContext";
@@ -30,9 +34,9 @@ interface SpringConfig {
 }
 
 const JELLY_SPRING: SpringConfig = {
-  stiffness: 150,   // Slightly softer for more wobble travel
-  damping: 8,       // LOW damping = visible wobble oscillation (was 12)
-  mass: 0.7,        // Light mass = responsive
+  stiffness: 110,   // Softer → more visible wobble travel distance
+  damping: 5.0,     // Very low → lots of oscillation cycles before settling
+  mass: 0.55,       // Light → snappy initial response
 };
 
 function stepSpring(
@@ -67,18 +71,24 @@ interface JellyMaterialCardProps {
   "data-project-card"?: boolean;
 }
 
-// Depth of the jelly slab in pixels — increased for visible thickness
-const JELLY_DEPTH = 24;
+// Depth of the jelly slab — 56px ≈ 1.5-4cm visual thickness at screen distance
+const JELLY_DEPTH = 56;
 
-// Default resting tilt so bottom edge is ALWAYS partially visible
-const REST_TILT_X = 3; // degrees — tilted slightly toward viewer
+// Default resting tilt — prominently shows bottom edge AND right side
+const REST_TILT_X = 7;     // degrees — tilted toward viewer (shows bottom)
+const REST_TILT_Y = -3.5;  // degrees — slight left rotation (shows right side)
+
+// Organic border-radius — different per corner for natural gel blob feel
+const ORGANIC_BR = "1.6rem 1.15rem 1.4rem 1.1rem";
+const ORGANIC_BR_SIDE_BOTTOM = "0 0 6px 6px";
+const ORGANIC_BR_SIDE_RIGHT = "0 6px 6px 0";
 
 function JellyMaterialCardInner({
   children,
   className = "",
   hue = 200,
   intensity = 0.8,
-  borderRadius = "1.25rem",
+  borderRadius,
   style,
   onClick,
   ...rest
@@ -95,14 +105,16 @@ function JellyMaterialCardInner({
     scaleX: { value: 1, velocity: 0 } as SpringState,
     scaleY: { value: 1, velocity: 0 } as SpringState,
     rotX: { value: REST_TILT_X, velocity: 0 } as SpringState,
-    rotY: { value: 0, velocity: 0 } as SpringState,
+    rotY: { value: REST_TILT_Y, velocity: 0 } as SpringState,
+    rotZ: { value: 0, velocity: 0 } as SpringState,
     translateZ: { value: 0, velocity: 0 } as SpringState,
   });
   const targetRef = useRef({
     scaleX: 1,
     scaleY: 1,
-    rotX: REST_TILT_X, // Default tilt
-    rotY: 0,
+    rotX: REST_TILT_X,
+    rotY: REST_TILT_Y,
+    rotZ: 0,
     translateZ: 0,
   });
   const lastTimeRef = useRef(0);
@@ -121,7 +133,9 @@ function JellyMaterialCardInner({
   const animate = useCallback((timestamp: number) => {
     if (!cubeRef.current) return;
 
-    const dt = lastTimeRef.current ? Math.min((timestamp - lastTimeRef.current) / 1000, 0.05) : 0.016;
+    const dt = lastTimeRef.current
+      ? Math.min((timestamp - lastTimeRef.current) / 1000, 0.05)
+      : 0.016;
     lastTimeRef.current = timestamp;
 
     const s = springRef.current;
@@ -131,29 +145,39 @@ function JellyMaterialCardInner({
     s.scaleY = stepSpring(s.scaleY, t.scaleY, JELLY_SPRING, dt);
     s.rotX = stepSpring(s.rotX, t.rotX, JELLY_SPRING, dt);
     s.rotY = stepSpring(s.rotY, t.rotY, JELLY_SPRING, dt);
+    s.rotZ = stepSpring(s.rotZ, t.rotZ, JELLY_SPRING, dt);
     s.translateZ = stepSpring(s.translateZ, t.translateZ, JELLY_SPRING, dt);
 
     cubeRef.current.style.transform =
       `rotateX(${s.rotX.value.toFixed(3)}deg) ` +
       `rotateY(${s.rotY.value.toFixed(3)}deg) ` +
+      `rotateZ(${s.rotZ.value.toFixed(3)}deg) ` +
       `scale3d(${s.scaleX.value.toFixed(4)}, ${s.scaleY.value.toFixed(4)}, 1) ` +
       `translateZ(${s.translateZ.value.toFixed(2)}px)`;
 
     const isSettled =
-      Math.abs(s.scaleX.velocity) < 0.0005 && Math.abs(s.scaleX.value - t.scaleX) < 0.0005 &&
-      Math.abs(s.scaleY.velocity) < 0.0005 && Math.abs(s.scaleY.value - t.scaleY) < 0.0005 &&
-      Math.abs(s.rotX.velocity) < 0.005 && Math.abs(s.rotX.value - t.rotX) < 0.005 &&
-      Math.abs(s.rotY.velocity) < 0.005 && Math.abs(s.rotY.value - t.rotY) < 0.005 &&
-      Math.abs(s.translateZ.velocity) < 0.005 && Math.abs(s.translateZ.value - t.translateZ) < 0.005;
+      Math.abs(s.scaleX.velocity) < 0.0003 &&
+      Math.abs(s.scaleX.value - t.scaleX) < 0.0003 &&
+      Math.abs(s.scaleY.velocity) < 0.0003 &&
+      Math.abs(s.scaleY.value - t.scaleY) < 0.0003 &&
+      Math.abs(s.rotX.velocity) < 0.003 &&
+      Math.abs(s.rotX.value - t.rotX) < 0.003 &&
+      Math.abs(s.rotY.velocity) < 0.003 &&
+      Math.abs(s.rotY.value - t.rotY) < 0.003 &&
+      Math.abs(s.rotZ.velocity) < 0.003 &&
+      Math.abs(s.rotZ.value - t.rotZ) < 0.003 &&
+      Math.abs(s.translateZ.velocity) < 0.003 &&
+      Math.abs(s.translateZ.value - t.translateZ) < 0.003;
 
     if (isSettled) {
       s.scaleX = { value: t.scaleX, velocity: 0 };
       s.scaleY = { value: t.scaleY, velocity: 0 };
       s.rotX = { value: t.rotX, velocity: 0 };
       s.rotY = { value: t.rotY, velocity: 0 };
+      s.rotZ = { value: t.rotZ, velocity: 0 };
       s.translateZ = { value: t.translateZ, velocity: 0 };
       cubeRef.current.style.transform =
-        `rotateX(${t.rotX}deg) rotateY(${t.rotY}deg) scale3d(${t.scaleX}, ${t.scaleY}, 1) translateZ(${t.translateZ}px)`;
+        `rotateX(${t.rotX}deg) rotateY(${t.rotY}deg) rotateZ(${t.rotZ}deg) scale3d(${t.scaleX}, ${t.scaleY}, 1) translateZ(${t.translateZ}px)`;
       isAnimatingRef.current = false;
       return;
     }
@@ -169,33 +193,39 @@ function JellyMaterialCardInner({
   }, [animate]);
 
   // Kick a wobble — inject velocity for jelly jiggle
-  const triggerWobble = useCallback((intensityMult = 1) => {
-    if (prefersReducedMotion) return;
-    const s = springRef.current;
-    // Inject LARGE asymmetric velocity for dramatic wobble
-    s.scaleX.velocity += (5 + Math.random() * 3) * intensityMult;
-    s.scaleY.velocity += (-4.5 - Math.random() * 3) * intensityMult;
-    s.rotX.velocity += (12 + Math.random() * 8) * intensityMult;
-    s.rotY.velocity += (-10 - Math.random() * 6) * intensityMult;
-    s.translateZ.velocity += (20 + Math.random() * 15) * intensityMult;
-    startAnimation();
-  }, [prefersReducedMotion, startAnimation]);
+  const triggerWobble = useCallback(
+    (intensityMult = 1) => {
+      if (prefersReducedMotion) return;
+      const s = springRef.current;
+      // Asymmetric velocity injection for organic wobble
+      s.scaleX.velocity += (8 + Math.random() * 5) * intensityMult;
+      s.scaleY.velocity += (-7 - Math.random() * 4) * intensityMult;
+      s.rotX.velocity += (20 + Math.random() * 14) * intensityMult;
+      s.rotY.velocity += (-16 - Math.random() * 10) * intensityMult;
+      s.rotZ.velocity += (4 + Math.random() * 5) * intensityMult * (Math.random() > 0.5 ? 1 : -1);
+      s.translateZ.velocity += (32 + Math.random() * 22) * intensityMult;
+      startAnimation();
+    },
+    [prefersReducedMotion, startAnimation]
+  );
 
-  // ── Idle wobble breathing — periodic nudge (battery-efficient) ──
+  // ── Idle wobble breathing — multi-frequency Lissajous pattern ──
   useEffect(() => {
     if (!jellyMode || prefersReducedMotion || !isInView) return;
 
     let phase = 0;
-    // Use setInterval instead of continuous RAF — fires every 2s for gentle nudge
     const interval = setInterval(() => {
       phase += 1;
       const s = springRef.current;
-      s.scaleX.velocity += Math.sin(phase * 0.7) * 0.4;
-      s.scaleY.velocity += Math.cos(phase * 1.1) * 0.35;
-      s.rotX.velocity += Math.sin(phase * 0.5) * 0.6;
-      s.rotY.velocity += Math.cos(phase * 0.8) * 0.5;
+      // Multi-frequency wobble for organic "alive" feel
+      s.scaleX.velocity += Math.sin(phase * 0.6) * 0.7 + Math.cos(phase * 1.7) * 0.3;
+      s.scaleY.velocity += Math.cos(phase * 0.9) * 0.6 + Math.sin(phase * 2.1) * 0.25;
+      s.rotX.velocity += Math.sin(phase * 0.4) * 1.2 + Math.cos(phase * 1.5) * 0.5;
+      s.rotY.velocity += Math.cos(phase * 0.7) * 0.9 + Math.sin(phase * 1.9) * 0.4;
+      s.rotZ.velocity += Math.sin(phase * 1.1) * 0.5;
+      s.translateZ.velocity += Math.cos(phase * 0.5) * 0.8;
       startAnimation();
-    }, 2000);
+    }, 1800);
 
     return () => clearInterval(interval);
   }, [jellyMode, prefersReducedMotion, isInView, startAnimation]);
@@ -214,7 +244,7 @@ function JellyMaterialCardInner({
             setHasEnteredView(true);
             const rect = el.getBoundingClientRect();
             const delay = (rect.left / window.innerWidth) * 200;
-            setTimeout(() => triggerWobble(1.2), delay); // Stronger entrance wobble
+            setTimeout(() => triggerWobble(1.6), delay);
           }
         });
       },
@@ -237,7 +267,6 @@ function JellyMaterialCardInner({
   useEffect(() => {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-
     };
   }, []);
 
@@ -251,9 +280,11 @@ function JellyMaterialCardInner({
       const y = (e.clientY - rect.top) / rect.height;
       setPointerPos({ x, y });
 
-      // Tilt targets — keep the base REST_TILT_X added
-      targetRef.current.rotX = REST_TILT_X + (y - 0.5) * -10 * intensity;
-      targetRef.current.rotY = (x - 0.5) * 10 * intensity;
+      // Tilt targets — keep base resting tilt, add pointer offset
+      targetRef.current.rotX = REST_TILT_X + (y - 0.5) * -15 * intensity;
+      targetRef.current.rotY = REST_TILT_Y + (x - 0.5) * 15 * intensity;
+      // Organic Z rotation
+      targetRef.current.rotZ = (x - 0.5) * (y - 0.5) * 4 * intensity;
       startAnimation();
     },
     [prefersReducedMotion, jellyMode, intensity, startAnimation]
@@ -264,11 +295,12 @@ function JellyMaterialCardInner({
     if (jellyMode && !prefersReducedMotion) {
       targetRef.current.scaleX = 1.025;
       targetRef.current.scaleY = 1.025;
-      targetRef.current.translateZ = 8;
+      targetRef.current.translateZ = 14;
       const s = springRef.current;
-      s.scaleX.velocity += 2.5;
-      s.scaleY.velocity -= 2;
-      s.rotX.velocity += 4;
+      s.scaleX.velocity += 4;
+      s.scaleY.velocity -= 3.5;
+      s.rotX.velocity += 7;
+      s.rotZ.velocity += 2;
       startAnimation();
     }
   }, [jellyMode, prefersReducedMotion, startAnimation]);
@@ -279,24 +311,25 @@ function JellyMaterialCardInner({
     if (jellyMode) {
       targetRef.current.scaleX = 1;
       targetRef.current.scaleY = 1;
-      targetRef.current.rotX = REST_TILT_X; // Return to resting tilt
-      targetRef.current.rotY = 0;
+      targetRef.current.rotX = REST_TILT_X;
+      targetRef.current.rotY = REST_TILT_Y;
+      targetRef.current.rotZ = 0;
       targetRef.current.translateZ = 0;
-      // Add departure wobble
       const s = springRef.current;
-      s.scaleX.velocity += -1.5;
-      s.scaleY.velocity += 1.8;
-      s.rotX.velocity += -3;
+      s.scaleX.velocity += -3;
+      s.scaleY.velocity += 3;
+      s.rotX.velocity += -6;
+      s.rotZ.velocity += -1.5;
       startAnimation();
     }
   }, [jellyMode, startAnimation]);
 
   const handlePointerDown = useCallback(() => {
     if (!jellyMode || prefersReducedMotion) return;
-    // Squish — like pressing into jelly
-    targetRef.current.scaleX = 1.06;
-    targetRef.current.scaleY = 0.94;
-    targetRef.current.translateZ = -6;
+    // Squish — compress vertically, expand horizontally (like pressing jelly)
+    targetRef.current.scaleX = 1.09;
+    targetRef.current.scaleY = 0.91;
+    targetRef.current.translateZ = -12;
     startAnimation();
   }, [jellyMode, prefersReducedMotion, startAnimation]);
 
@@ -304,13 +337,14 @@ function JellyMaterialCardInner({
     if (!jellyMode || prefersReducedMotion) return;
     targetRef.current.scaleX = hover ? 1.025 : 1;
     targetRef.current.scaleY = hover ? 1.025 : 1;
-    targetRef.current.translateZ = hover ? 8 : 0;
-    // Inject extra velocity for bouncy release
+    targetRef.current.translateZ = hover ? 14 : 0;
     const s = springRef.current;
-    s.scaleX.velocity += -6;
-    s.scaleY.velocity += 7;
-    s.rotX.velocity += 10;
-    s.translateZ.velocity += 20;
+    // Strong bounce-back
+    s.scaleX.velocity += -9;
+    s.scaleY.velocity += 10;
+    s.rotX.velocity += 16;
+    s.rotZ.velocity += 4;
+    s.translateZ.velocity += 30;
     startAnimation();
   }, [jellyMode, prefersReducedMotion, hover, startAnimation]);
 
@@ -322,7 +356,7 @@ function JellyMaterialCardInner({
       <div
         ref={containerRef}
         className={`relative overflow-hidden bg-card/60 backdrop-blur-md border border-border/30 shadow-sm hover:bg-card/80 hover:border-border/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-500 ${className}`}
-        style={{ borderRadius, ...style }}
+        style={{ borderRadius: borderRadius || "1.25rem", ...style }}
         onClick={onClick}
         {...rest}
       >
@@ -338,140 +372,147 @@ function JellyMaterialCardInner({
   const specX = pointerPos.x * 100;
   const specY = pointerPos.y * 100;
   const depth = JELLY_DEPTH;
-  const br = borderRadius;
-  const brNum = parseFloat(borderRadius) || 20;
-  const sideBr = `${Math.max(2, brNum * 0.15)}px`;
+  const br = ORGANIC_BR;
 
-  // ── Material colors ──
+  // ── Material colors (more saturated for visible gel) ──
   const gelBodyColor = isDark
-    ? `hsla(${hue}, 50%, 18%, 0.6)`
-    : `hsla(${hue}, 38%, 91%, 0.5)`;
+    ? `hsla(${hue}, 58%, 22%, 0.6)`
+    : `hsla(${hue}, 48%, 90%, 0.52)`;
 
   // ── Edge thickness gradient (thicker gel at borders) ──
   const edgeThickness = isDark
     ? [
-        `linear-gradient(180deg, hsla(${hue}, 65%, 55%, 0.4) 0%, transparent 22%)`,
-        `linear-gradient(0deg, hsla(${hue}, 55%, 22%, 0.5) 0%, transparent 22%)`,
-        `linear-gradient(90deg, hsla(${hue}, 60%, 55%, 0.3) 0%, transparent 19%)`,
-        `linear-gradient(270deg, hsla(${hue}, 60%, 55%, 0.3) 0%, transparent 19%)`,
+        `linear-gradient(180deg, hsla(${hue}, 72%, 62%, 0.5) 0%, transparent 28%)`,
+        `linear-gradient(0deg, hsla(${hue}, 62%, 28%, 0.6) 0%, transparent 28%)`,
+        `linear-gradient(90deg, hsla(${hue}, 66%, 62%, 0.4) 0%, transparent 24%)`,
+        `linear-gradient(270deg, hsla(${hue}, 66%, 62%, 0.4) 0%, transparent 24%)`,
       ].join(", ")
     : [
-        `linear-gradient(180deg, hsla(${hue}, 55%, 80%, 0.6) 0%, transparent 24%)`,
-        `linear-gradient(0deg, hsla(${hue}, 45%, 58%, 0.22) 0%, transparent 22%)`,
-        `linear-gradient(90deg, hsla(${hue}, 50%, 78%, 0.45) 0%, transparent 20%)`,
-        `linear-gradient(270deg, hsla(${hue}, 50%, 78%, 0.45) 0%, transparent 20%)`,
+        `linear-gradient(180deg, hsla(${hue}, 62%, 84%, 0.72) 0%, transparent 30%)`,
+        `linear-gradient(0deg, hsla(${hue}, 52%, 62%, 0.3) 0%, transparent 28%)`,
+        `linear-gradient(90deg, hsla(${hue}, 56%, 82%, 0.55) 0%, transparent 24%)`,
+        `linear-gradient(270deg, hsla(${hue}, 56%, 82%, 0.55) 0%, transparent 24%)`,
       ].join(", ");
 
-  // ── Top surface sheen (wet gel highlight) ──
+  // ── Top surface sheen (wet gel highlight — the "fresh out of mold" look) ──
   const topSheen = isDark
-    ? `linear-gradient(180deg,
-        rgba(255,255,255,0.3) 0%,
-        rgba(255,255,255,0.15) 3%,
-        rgba(255,255,255,0.05) 14%,
-        transparent 28%)`
-    : `linear-gradient(180deg,
-        rgba(255,255,255,0.85) 0%,
-        rgba(255,255,255,0.45) 3%,
-        rgba(255,255,255,0.14) 14%,
-        transparent 28%)`;
+    ? `linear-gradient(172deg,
+        rgba(255,255,255,0.42) 0%,
+        rgba(255,255,255,0.22) 5%,
+        rgba(255,255,255,0.08) 18%,
+        transparent 34%)`
+    : `linear-gradient(172deg,
+        rgba(255,255,255,0.95) 0%,
+        rgba(255,255,255,0.55) 5%,
+        rgba(255,255,255,0.2) 18%,
+        transparent 34%)`;
 
   // ── Specular highlight blob (follows pointer) ──
-  const specularBlob = `radial-gradient(ellipse 55% 40% at ${specX}% ${specY}%,
-    rgba(255,255,255,${isDark ? 0.35 : 0.6}) 0%,
-    rgba(255,255,255,${isDark ? 0.12 : 0.28}) 22%,
-    rgba(255,255,255,${isDark ? 0.03 : 0.07}) 48%,
-    transparent 68%)`;
+  const specularBlob = `radial-gradient(ellipse 65% 50% at ${specX}% ${specY}%,
+    rgba(255,255,255,${isDark ? 0.45 : 0.72}) 0%,
+    rgba(255,255,255,${isDark ? 0.16 : 0.35}) 26%,
+    rgba(255,255,255,${isDark ? 0.05 : 0.1}) 52%,
+    transparent 72%)`;
 
   // ── Internal caustic shimmer ──
-  const cx = 25 + pointerPos.x * 50;
-  const cy = 15 + pointerPos.y * 70;
+  const cx = 18 + pointerPos.x * 64;
+  const cy = 8 + pointerPos.y * 84;
   const causticShimmer = isDark
-    ? `radial-gradient(ellipse 75% 55% at ${cx}% ${cy}%,
-        hsla(${hue + 25}, 70%, 58%, 0.16) 0%,
-        hsla(${hue - 15}, 60%, 48%, 0.08) 35%,
-        transparent 65%)`
-    : `radial-gradient(ellipse 75% 55% at ${cx}% ${cy}%,
-        hsla(${hue + 25}, 60%, 70%, 0.24) 0%,
-        hsla(${hue - 15}, 50%, 76%, 0.12) 35%,
-        transparent 65%)`;
+    ? `radial-gradient(ellipse 85% 65% at ${cx}% ${cy}%,
+        hsla(${hue + 30}, 75%, 62%, 0.22) 0%,
+        hsla(${hue - 20}, 65%, 52%, 0.11) 40%,
+        transparent 70%)`
+    : `radial-gradient(ellipse 85% 65% at ${cx}% ${cy}%,
+        hsla(${hue + 30}, 65%, 74%, 0.32) 0%,
+        hsla(${hue - 20}, 55%, 80%, 0.16) 40%,
+        transparent 70%)`;
 
   // ── Corner glow (diagonal refraction) ──
   const cornerGlow = isDark
-    ? `radial-gradient(ellipse 45% 45% at 0% 0%, hsla(${hue}, 65%, 58%, 0.2) 0%, transparent 60%),
-       radial-gradient(ellipse 45% 45% at 100% 100%, hsla(${hue + 30}, 60%, 52%, 0.14) 0%, transparent 60%)`
-    : `radial-gradient(ellipse 45% 45% at 0% 0%, hsla(${hue}, 55%, 78%, 0.35) 0%, transparent 60%),
-       radial-gradient(ellipse 45% 45% at 100% 100%, hsla(${hue + 30}, 50%, 73%, 0.22) 0%, transparent 60%)`;
+    ? `radial-gradient(ellipse 55% 55% at 0% 0%, hsla(${hue}, 72%, 62%, 0.26) 0%, transparent 65%),
+       radial-gradient(ellipse 55% 55% at 100% 100%, hsla(${hue + 35}, 65%, 56%, 0.2) 0%, transparent 65%)`
+    : `radial-gradient(ellipse 55% 55% at 0% 0%, hsla(${hue}, 62%, 82%, 0.42) 0%, transparent 65%),
+       radial-gradient(ellipse 55% 55% at 100% 100%, hsla(${hue + 35}, 55%, 78%, 0.3) 0%, transparent 65%)`;
 
-  // ── Inner shadows (gel depth) ──
+  // ── Inner shadows (gel depth — the "looking into thick gel" effect) ──
   const innerShadow = isDark
-    ? `inset 0 3px 0 rgba(255,255,255,0.3),
-       inset 0 -4px 0 rgba(0,0,0,0.5),
-       inset 3px 0 0 rgba(255,255,255,0.12),
-       inset -3px 0 0 rgba(255,255,255,0.12),
-       inset 0 10px 20px rgba(255,255,255,0.08),
-       inset 0 -10px 20px rgba(0,0,0,0.2)`
-    : `inset 0 3px 0 rgba(255,255,255,0.95),
-       inset 0 -4px 0 rgba(0,0,0,0.12),
-       inset 3px 0 0 rgba(255,255,255,0.55),
-       inset -3px 0 0 rgba(255,255,255,0.55),
-       inset 0 10px 22px rgba(255,255,255,0.3),
-       inset 0 -10px 22px rgba(0,0,0,0.05)`;
+    ? `inset 0 5px 0 rgba(255,255,255,0.36),
+       inset 0 -6px 0 rgba(0,0,0,0.6),
+       inset 5px 0 0 rgba(255,255,255,0.16),
+       inset -5px 0 0 rgba(255,255,255,0.16),
+       inset 0 14px 28px rgba(255,255,255,0.12),
+       inset 0 -14px 28px rgba(0,0,0,0.26)`
+    : `inset 0 5px 0 rgba(255,255,255,0.99),
+       inset 0 -6px 0 rgba(0,0,0,0.16),
+       inset 5px 0 0 rgba(255,255,255,0.65),
+       inset -5px 0 0 rgba(255,255,255,0.65),
+       inset 0 14px 30px rgba(255,255,255,0.4),
+       inset 0 -14px 30px rgba(0,0,0,0.08)`;
 
-  // ── Outer shadow (gel slab physical depth) ──
+  // ── Outer shadow (gel slab physical depth — the "sitting on surface" shadow) ──
   const outerShadow = hover
     ? isDark
-      ? `0 ${depth + 8}px ${depth * 3}px hsla(${hue}, 60%, 32%, 0.5),
-         0 ${depth + 3}px ${depth * 1.2}px rgba(0,0,0,0.55),
-         0 ${depth * 2.5}px ${depth * 5}px hsla(${hue}, 55%, 28%, 0.25),
-         0 1px 0 hsla(${hue}, 55%, 58%, 0.18)`
-      : `0 ${depth + 8}px ${depth * 3}px hsla(${hue}, 50%, 58%, 0.25),
-         0 ${depth + 3}px ${depth * 1.2}px rgba(0,0,0,0.08),
-         0 ${depth * 2.5}px ${depth * 5}px hsla(${hue}, 45%, 62%, 0.12),
-         0 1px 0 rgba(255,255,255,0.55)`
+      ? `0 ${depth + 14}px ${depth * 4}px hsla(${hue}, 65%, 36%, 0.55),
+         0 ${depth + 6}px ${depth * 1.5}px rgba(0,0,0,0.65),
+         0 ${depth * 3}px ${depth * 6}px hsla(${hue}, 60%, 32%, 0.32),
+         0 3px 0 hsla(${hue}, 60%, 62%, 0.24)`
+      : `0 ${depth + 14}px ${depth * 4}px hsla(${hue}, 55%, 62%, 0.32),
+         0 ${depth + 6}px ${depth * 1.5}px rgba(0,0,0,0.12),
+         0 ${depth * 3}px ${depth * 6}px hsla(${hue}, 50%, 66%, 0.16),
+         0 3px 0 rgba(255,255,255,0.65)`
     : isDark
-      ? `0 ${depth}px ${depth * 1.8}px rgba(0,0,0,0.45),
-         0 ${depth / 2}px ${depth * 0.6}px rgba(0,0,0,0.35),
-         0 1px 0 hsla(${hue}, 45%, 52%, 0.12)`
-      : `0 ${depth}px ${depth * 1.8}px rgba(0,0,0,0.1),
-         0 ${depth / 2}px ${depth * 0.6}px rgba(0,0,0,0.05),
-         0 1px 0 rgba(255,255,255,0.45)`;
+      ? `0 ${depth}px ${depth * 2.5}px rgba(0,0,0,0.55),
+         0 ${depth / 2}px ${depth * 0.8}px rgba(0,0,0,0.45),
+         0 3px 0 hsla(${hue}, 50%, 56%, 0.16)`
+      : `0 ${depth}px ${depth * 2.5}px rgba(0,0,0,0.14),
+         0 ${depth / 2}px ${depth * 0.8}px rgba(0,0,0,0.08),
+         0 3px 0 rgba(255,255,255,0.55)`;
 
   // ── Border colors (gel edge refraction) ──
   const bdrTop = isDark
-    ? `hsla(${hue}, 60%, 68%, ${hover ? 0.55 : 0.35})`
-    : `hsla(${hue}, 50%, 82%, ${hover ? 0.8 : 0.55})`;
+    ? `hsla(${hue}, 65%, 72%, ${hover ? 0.62 : 0.42})`
+    : `hsla(${hue}, 55%, 86%, ${hover ? 0.85 : 0.62})`;
   const bdrBottom = isDark
-    ? `hsla(${hue}, 45%, 32%, ${hover ? 0.6 : 0.4})`
-    : `hsla(${hue}, 35%, 60%, ${hover ? 0.45 : 0.3})`;
+    ? `hsla(${hue}, 50%, 36%, ${hover ? 0.66 : 0.46})`
+    : `hsla(${hue}, 40%, 64%, ${hover ? 0.52 : 0.36})`;
 
-  // ── Side face gradients (visible 3D depth) ──
-  const sideGradient = isDark
+  // ── Side face gradients (visible 3D depth — the "gel slab thickness") ──
+  const bottomSideGradient = isDark
     ? `linear-gradient(180deg,
-        hsla(${hue}, 60%, 48%, 0.55) 0%,
-        hsla(${hue}, 55%, 28%, 0.75) 50%,
-        hsla(${hue}, 50%, 18%, 0.85) 100%)`
+        hsla(${hue}, 65%, 52%, 0.65) 0%,
+        hsla(${hue}, 60%, 34%, 0.82) 40%,
+        hsla(${hue}, 55%, 22%, 0.92) 100%)`
     : `linear-gradient(180deg,
-        hsla(${hue}, 45%, 86%, 0.65) 0%,
-        hsla(${hue}, 40%, 76%, 0.55) 50%,
-        hsla(${hue}, 35%, 66%, 0.45) 100%)`;
+        hsla(${hue}, 52%, 90%, 0.72) 0%,
+        hsla(${hue}, 46%, 80%, 0.62) 40%,
+        hsla(${hue}, 40%, 70%, 0.52) 100%)`;
 
-  const bottomGradient = isDark
+  const rightSideGradient = isDark
+    ? `linear-gradient(90deg,
+        hsla(${hue}, 60%, 48%, 0.6) 0%,
+        hsla(${hue}, 55%, 28%, 0.78) 40%,
+        hsla(${hue}, 50%, 18%, 0.88) 100%)`
+    : `linear-gradient(90deg,
+        hsla(${hue}, 48%, 88%, 0.65) 0%,
+        hsla(${hue}, 42%, 78%, 0.55) 40%,
+        hsla(${hue}, 38%, 70%, 0.45) 100%)`;
+
+  const bottomFaceGradient = isDark
     ? `linear-gradient(180deg,
-        hsla(${hue}, 50%, 12%, 0.9) 0%,
-        hsla(${hue}, 45%, 8%, 0.95) 100%)`
+        hsla(${hue}, 55%, 16%, 0.94) 0%,
+        hsla(${hue}, 50%, 12%, 0.97) 100%)`
     : `linear-gradient(180deg,
-        hsla(${hue}, 35%, 70%, 0.5) 0%,
-        hsla(${hue}, 30%, 62%, 0.4) 100%)`;
+        hsla(${hue}, 40%, 74%, 0.58) 0%,
+        hsla(${hue}, 34%, 66%, 0.48) 100%)`;
 
   return (
     <div
       ref={containerRef}
       className={`relative group cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary/70 ${className}`}
       style={{
-        perspective: "900px",
-        perspectiveOrigin: "50% 35%",
-        // Extra bottom margin for the visible depth + shadow
-        marginBottom: `${depth * 0.8}px`,
+        perspective: "650px",
+        perspectiveOrigin: "38% 24%", // Shifted upper-left → dramatic 3D view
+        marginBottom: `${depth * 1.1}px`,
         ...style,
       }}
       onPointerMove={handlePointerMove}
@@ -482,14 +523,13 @@ function JellyMaterialCardInner({
       onClick={onClick}
       {...rest}
     >
-      {/* 3D Cube Container — preserve-3d for visible side faces */}
+      {/* 3D Cube Container */}
       <div
         ref={cubeRef}
         style={{
-          transformStyle: "preserve3d" as any,
+          transformStyle: "preserve-3d" as any,
           willChange: "transform",
-          // DEFAULT: slight tilt so bottom edge is visible at rest
-          transform: `rotateX(${REST_TILT_X}deg) rotateY(0deg) scale3d(1, 1, 1) translateZ(0px)`,
+          transform: `rotateX(${REST_TILT_X}deg) rotateY(${REST_TILT_Y}deg) rotateZ(0deg) scale3d(1, 1, 1) translateZ(0px)`,
           transformOrigin: "50% 50%",
         }}
       >
@@ -502,10 +542,10 @@ function JellyMaterialCardInner({
             backfaceVisibility: "hidden",
             boxShadow: `${innerShadow}, ${outerShadow}`,
             borderStyle: "solid",
-            borderTopWidth: "1.5px",
-            borderLeftWidth: "1.5px",
-            borderRightWidth: "1.5px",
-            borderBottomWidth: "2.5px",
+            borderTopWidth: "2px",
+            borderLeftWidth: "2px",
+            borderRightWidth: "2.5px",
+            borderBottomWidth: "3px",
             borderTopColor: bdrTop,
             borderLeftColor: bdrTop,
             borderRightColor: bdrBottom,
@@ -518,8 +558,8 @@ function JellyMaterialCardInner({
             style={{
               borderRadius: br,
               backgroundColor: gelBodyColor,
-              backdropFilter: "blur(24px) saturate(1.8)",
-              WebkitBackdropFilter: "blur(24px) saturate(1.8)",
+              backdropFilter: "blur(32px) saturate(2.0)",
+              WebkitBackdropFilter: "blur(32px) saturate(2.0)",
               zIndex: 0,
             }}
             aria-hidden="true"
@@ -546,7 +586,7 @@ function JellyMaterialCardInner({
               borderRadius: br,
               background: specularBlob,
               zIndex: 3,
-              opacity: hover ? 1 : 0.35,
+              opacity: hover ? 1 : 0.25,
               transition: "opacity 0.4s ease",
             }}
             aria-hidden="true"
@@ -559,7 +599,7 @@ function JellyMaterialCardInner({
               borderRadius: br,
               background: causticShimmer,
               zIndex: 4,
-              opacity: hover ? 0.95 : 0.55,
+              opacity: hover ? 0.95 : 0.45,
               transition: "opacity 0.5s ease",
             }}
             aria-hidden="true"
@@ -572,14 +612,14 @@ function JellyMaterialCardInner({
             aria-hidden="true"
           />
 
-          {/* L7: Text contrast backing — ensures WCAG readability over gel */}
+          {/* L7: Text contrast backing */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
               borderRadius: br,
               background: isDark
-                ? 'linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.15) 100%)'
-                : 'linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.2) 100%)',
+                ? "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.2) 100%)"
+                : "linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.24) 100%)",
               zIndex: 6,
             }}
             aria-hidden="true"
@@ -603,7 +643,7 @@ function JellyMaterialCardInner({
           className="absolute inset-0 pointer-events-none"
           style={{
             borderRadius: br,
-            background: bottomGradient,
+            background: bottomFaceGradient,
             transform: `translateZ(0px) rotateX(180deg)`,
             backfaceVisibility: "hidden",
           }}
@@ -611,7 +651,8 @@ function JellyMaterialCardInner({
         />
 
         {/* ═══ SIDE FACES — Visible 3D depth edges ═══ */}
-        {/* Bottom edge (MOST visible due to default tilt — the "thickness" you see) */}
+
+        {/* Bottom edge — MOST visible (7° tilt shows this prominently) */}
         <div
           className="absolute pointer-events-none"
           style={{
@@ -619,16 +660,20 @@ function JellyMaterialCardInner({
             right: 0,
             bottom: 0,
             height: `${depth}px`,
-            background: sideGradient,
-            borderRadius: `0 0 ${sideBr} ${sideBr}`,
+            background: bottomSideGradient,
+            borderRadius: ORGANIC_BR_SIDE_BOTTOM,
             transform: `rotateX(-90deg)`,
             transformOrigin: "bottom center",
             backfaceVisibility: "hidden",
-            borderBottomWidth: "1px",
+            borderBottomWidth: "1.5px",
             borderBottomStyle: "solid",
             borderBottomColor: isDark
-              ? `hsla(${hue}, 45%, 28%, 0.55)`
-              : `hsla(${hue}, 35%, 68%, 0.35)`,
+              ? `hsla(${hue}, 50%, 32%, 0.65)`
+              : `hsla(${hue}, 40%, 72%, 0.45)`,
+            // Gel inner glow on side face
+            boxShadow: isDark
+              ? `inset 0 -3px 12px hsla(${hue}, 58%, 48%, 0.35), inset 0 3px 6px rgba(255,255,255,0.1)`
+              : `inset 0 -3px 12px hsla(${hue}, 48%, 68%, 0.25), inset 0 3px 6px rgba(255,255,255,0.35)`,
           }}
           aria-hidden="true"
         />
@@ -643,12 +688,12 @@ function JellyMaterialCardInner({
             height: `${depth}px`,
             background: isDark
               ? `linear-gradient(180deg,
-                  hsla(${hue}, 60%, 58%, 0.45) 0%,
-                  hsla(${hue}, 55%, 38%, 0.65) 100%)`
+                  hsla(${hue}, 65%, 62%, 0.55) 0%,
+                  hsla(${hue}, 60%, 42%, 0.72) 100%)`
               : `linear-gradient(180deg,
-                  hsla(${hue}, 45%, 90%, 0.55) 0%,
-                  hsla(${hue}, 40%, 80%, 0.45) 100%)`,
-            borderRadius: `${sideBr} ${sideBr} 0 0`,
+                  hsla(${hue}, 52%, 94%, 0.65) 0%,
+                  hsla(${hue}, 46%, 84%, 0.55) 100%)`,
+            borderRadius: `6px 6px 0 0`,
             transform: `rotateX(90deg)`,
             transformOrigin: "top center",
             backfaceVisibility: "hidden",
@@ -664,8 +709,14 @@ function JellyMaterialCardInner({
             top: 0,
             bottom: 0,
             width: `${depth}px`,
-            background: sideGradient,
-            borderRadius: `${sideBr} 0 0 ${sideBr}`,
+            background: isDark
+              ? `linear-gradient(180deg,
+                  hsla(${hue}, 60%, 50%, 0.55) 0%,
+                  hsla(${hue}, 55%, 30%, 0.72) 100%)`
+              : `linear-gradient(180deg,
+                  hsla(${hue}, 48%, 90%, 0.6) 0%,
+                  hsla(${hue}, 42%, 80%, 0.5) 100%)`,
+            borderRadius: `6px 0 0 6px`,
             transform: `rotateY(90deg)`,
             transformOrigin: "left center",
             backfaceVisibility: "hidden",
@@ -673,7 +724,7 @@ function JellyMaterialCardInner({
           aria-hidden="true"
         />
 
-        {/* Right edge */}
+        {/* Right edge — SECOND most visible (3.5° Y tilt shows this) */}
         <div
           className="absolute pointer-events-none"
           style={{
@@ -681,46 +732,67 @@ function JellyMaterialCardInner({
             top: 0,
             bottom: 0,
             width: `${depth}px`,
-            background: isDark
-              ? `linear-gradient(180deg,
-                  hsla(${hue}, 55%, 42%, 0.5) 0%,
-                  hsla(${hue}, 50%, 22%, 0.7) 100%)`
-              : `linear-gradient(180deg,
-                  hsla(${hue}, 42%, 84%, 0.55) 0%,
-                  hsla(${hue}, 36%, 74%, 0.45) 100%)`,
-            borderRadius: `0 ${sideBr} ${sideBr} 0`,
+            background: rightSideGradient,
+            borderRadius: ORGANIC_BR_SIDE_RIGHT,
             transform: `rotateY(-90deg)`,
             transformOrigin: "right center",
             backfaceVisibility: "hidden",
+            borderRightWidth: "1.5px",
+            borderRightStyle: "solid",
+            borderRightColor: isDark
+              ? `hsla(${hue}, 48%, 28%, 0.55)`
+              : `hsla(${hue}, 38%, 68%, 0.35)`,
+            boxShadow: isDark
+              ? `inset -3px 0 12px hsla(${hue}, 55%, 42%, 0.3), inset 3px 0 6px rgba(255,255,255,0.08)`
+              : `inset -3px 0 12px hsla(${hue}, 45%, 64%, 0.22), inset 3px 0 6px rgba(255,255,255,0.3)`,
           }}
           aria-hidden="true"
         />
       </div>
 
       {/* ═══ FALLBACK THICKNESS STRIP — Always visible even without 3D ═══ */}
-      {/* This ensures the "height/thickness" is visible even on browsers with poor preserve-3d */}
       <div
         className="absolute left-0 right-0 pointer-events-none"
         style={{
-          bottom: `-${depth * 0.6}px`,
-          height: `${depth * 0.7}px`,
-          borderRadius: `0 0 ${br} ${br}`,
+          bottom: `-${depth * 0.75}px`,
+          height: `${depth * 0.85}px`,
+          borderRadius: `0 0 1.4rem 1.1rem`,
           background: isDark
             ? `linear-gradient(180deg,
-                hsla(${hue}, 50%, 30%, 0.5) 0%,
-                hsla(${hue}, 45%, 18%, 0.3) 60%,
+                hsla(${hue}, 55%, 34%, 0.6) 0%,
+                hsla(${hue}, 50%, 22%, 0.4) 50%,
                 transparent 100%)`
             : `linear-gradient(180deg,
-                hsla(${hue}, 40%, 75%, 0.4) 0%,
-                hsla(${hue}, 35%, 82%, 0.2) 60%,
+                hsla(${hue}, 45%, 78%, 0.5) 0%,
+                hsla(${hue}, 40%, 86%, 0.3) 50%,
                 transparent 100%)`,
-          filter: "blur(2px)",
+          filter: "blur(3px)",
           zIndex: -1,
         }}
         aria-hidden="true"
       />
 
-
+      {/* ═══ FALLBACK RIGHT EDGE STRIP ═══ */}
+      <div
+        className="absolute top-0 bottom-0 pointer-events-none"
+        style={{
+          right: `-${depth * 0.4}px`,
+          width: `${depth * 0.55}px`,
+          borderRadius: `0 1.15rem 1.4rem 0`,
+          background: isDark
+            ? `linear-gradient(90deg,
+                hsla(${hue}, 52%, 30%, 0.5) 0%,
+                hsla(${hue}, 48%, 20%, 0.3) 50%,
+                transparent 100%)`
+            : `linear-gradient(90deg,
+                hsla(${hue}, 42%, 76%, 0.4) 0%,
+                hsla(${hue}, 38%, 84%, 0.22) 50%,
+                transparent 100%)`,
+          filter: "blur(3px)",
+          zIndex: -1,
+        }}
+        aria-hidden="true"
+      />
     </div>
   );
 }

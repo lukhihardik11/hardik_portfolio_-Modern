@@ -94,6 +94,9 @@ export function HeroSection() {
   const bgLayer2 = useRef<HTMLDivElement>(null);
   const bgLayer3 = useRef<HTMLDivElement>(null);
 
+  // Store SplitText instance so we can revert before React reconciles
+  const nameSplitRef = useRef<SplitText | null>(null);
+
   useEffect(() => {
     if (reducedMotion) {
       // Make everything visible immediately
@@ -106,14 +109,16 @@ export function HeroSection() {
       return;
     }
 
+    let cancelled = false;
+
     const ctx = gsap.context(() => {
       // ═══════════════════════════════════════
       // 1. SplitText character reveal on name
       // ═══════════════════════════════════════
       if (nameRef.current) {
         document.fonts.ready.then(() => {
-          if (!nameRef.current) return;
-          SplitText.create(nameRef.current, {
+          if (cancelled || !nameRef.current) return;
+          const split = SplitText.create(nameRef.current, {
             type: "chars",
             autoSplit: true,
             onSplit(self) {
@@ -128,6 +133,7 @@ export function HeroSection() {
               });
             },
           });
+          nameSplitRef.current = split;
         });
       }
 
@@ -209,7 +215,15 @@ export function HeroSection() {
       }
     }, sectionRef);
 
-    return () => ctx.revert();
+    return () => {
+      cancelled = true;
+      // Revert SplitText BEFORE gsap.context revert to restore original DOM
+      if (nameSplitRef.current) {
+        nameSplitRef.current.revert();
+        nameSplitRef.current = null;
+      }
+      ctx.revert();
+    };
   }, [isDesktop, reducedMotion]);
 
   const onSplineLoad = useCallback(
@@ -338,23 +352,19 @@ export function HeroSection() {
               </span>
             </div>
 
-            {/* Name — SplitText character reveal */}
+            {/* Name — SplitText character reveal.
+                Uses dangerouslySetInnerHTML so React doesn't track the inner DOM nodes.
+                This prevents the "removeChild" error when SplitText replaces text nodes
+                with character <div>s and a later re-render (e.g., from GPU tier detection
+                in HeroCrossSection) causes React to try reconciling stale children. */}
             <h1
               ref={nameRef}
               className="font-display text-[2.75rem] sm:text-5xl md:text-6xl lg:text-7xl xl:text-[5.25rem] tracking-[-0.035em] leading-[1.02]"
               style={{ fontWeight: 700, clipPath: "inset(0 0 0 0)" }}
-            >
-              <span className="text-foreground block">Hardik</span>
-              <span
-                className="bg-clip-text text-transparent block"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(135deg, var(--jelly-teal) 0%, oklch(0.65 0.16 200) 40%, var(--jelly-amber) 100%)",
-                }}
-              >
-                Lukhi
-              </span>
-            </h1>
+              dangerouslySetInnerHTML={{
+                __html: `<span class="text-foreground block">Hardik</span><span class="bg-clip-text text-transparent block" style="background-image: linear-gradient(135deg, var(--jelly-teal) 0%, oklch(0.65 0.16 200) 40%, var(--jelly-amber) 100%)">Lukhi</span>`
+              }}
+            />
 
             {/* Role */}
             <p

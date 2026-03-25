@@ -1,16 +1,13 @@
 /**
- * JellyMaterialCard v8 — Physically-based gel material.
+ * JellyMaterialCard v6 — Ultra-transparent gel cube with real internal physics.
  *
- * Architecture: Flat card + visible thickness strips (no preserve-3d).
- * The card tilts as a flat plane via perspective() rotateX/Y — never flips.
- * Depth illusion from bottom/right thickness strips + layered gel material.
- *
- * Physics (matched to TypeGPU reference):
- *  1. Fresnel reflectance (IOR 1.42, Schlick's)
- *  2. Beer-Lambert absorption (depth-dependent saturation)
- *  3. Subsurface scattering (warm internal glow)
- *  4. Spring physics (stiffness 900-1000, damping 10-20)
- *  5. Squash/wiggle deformation on impact
+ * Key principle: Real jelly is ~95% transparent. The "gel" feel comes from:
+ *  1. Edge refraction (Fresnel) — colored, thick edges; clear center
+ *  2. Internal light bending — animated refraction caustics
+ *  3. Surface tension — wet specular sheen
+ *  4. Chromatic aberration — light splits at gel boundaries
+ *  5. Subsurface scattering — light bounces inside, exits elsewhere
+ *  6. 3D depth — visible side faces with translucent gel glow
  *
  * GPU: Only transform & opacity animated (compositor-only).
  */
@@ -19,31 +16,18 @@ import { useJellyMode } from "@/contexts/JellyModeContext";
 import { useTheme } from "@/contexts/ThemeContext";
 
 // ═══════════════════════════════════════════════════════
-// Spring Physics
+// Spring Physics Engine
 // ═══════════════════════════════════════════════════════
 interface SpringState { value: number; velocity: number; }
 interface SpringConfig { stiffness: number; damping: number; mass: number; }
 
-const SQUASH_SPRING: SpringConfig = { stiffness: 950, damping: 11, mass: 1 };
-const WIGGLE_SPRING: SpringConfig = { stiffness: 1000, damping: 18, mass: 1 };
-const TILT_SPRING: SpringConfig = { stiffness: 280, damping: 16, mass: 1 };
+const JELLY_SPRING: SpringConfig = { stiffness: 85, damping: 3.8, mass: 0.45 };
 
 function stepSpring(s: SpringState, target: number, c: SpringConfig, dt: number): SpringState {
-  const F = -c.stiffness * (s.value - target) - c.damping * s.velocity;
-  const vel = s.velocity + (F / c.mass) * dt;
+  const disp = s.value - target;
+  const acc = (-c.stiffness * disp - c.damping * s.velocity) / c.mass;
+  const vel = s.velocity + acc * dt;
   return { value: s.value + vel * dt, velocity: vel };
-}
-
-// ═══════════════════════════════════════════════════════
-// Optics
-// ═══════════════════════════════════════════════════════
-function fresnelAlpha(d: number): number {
-  const R0 = 0.03;
-  return R0 + (1 - R0) * Math.pow(d, 5);
-}
-
-function beerLambertAlpha(thickness: number, sigma = 2.5): number {
-  return 1 - Math.exp(-sigma * thickness);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -62,11 +46,10 @@ interface JellyMaterialCardProps {
   "data-project-card"?: boolean;
 }
 
-// Visible depth in px (the thickness strips)
-const DEPTH = 14;
-// Resting tilt — subtle enough to show thickness, never flips
-const REST_X = 2;
-const REST_Y = -1.2;
+const JELLY_DEPTH = 48;
+const REST_TILT_X = 6;
+const REST_TILT_Y = -3;
+const ORGANIC_BR = "1.5rem 1.1rem 1.35rem 1.05rem";
 
 function JellyMaterialCardInner({
   children,
@@ -82,18 +65,21 @@ function JellyMaterialCardInner({
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
-  const cardRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cubeRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>(0);
 
   const springRef = useRef({
-    squashX: { value: 0, velocity: 0 } as SpringState,
-    squashY: { value: 0, velocity: 0 } as SpringState,
-    wiggle: { value: 0, velocity: 0 } as SpringState,
-    tiltX: { value: REST_X, velocity: 0 } as SpringState,
-    tiltY: { value: REST_Y, velocity: 0 } as SpringState,
-    lift: { value: 0, velocity: 0 } as SpringState,
+    scaleX: { value: 1, velocity: 0 } as SpringState,
+    scaleY: { value: 1, velocity: 0 } as SpringState,
+    rotX: { value: REST_TILT_X, velocity: 0 } as SpringState,
+    rotY: { value: REST_TILT_Y, velocity: 0 } as SpringState,
+    rotZ: { value: 0, velocity: 0 } as SpringState,
+    translateZ: { value: 0, velocity: 0 } as SpringState,
   });
-  const targetRef = useRef({ tiltX: REST_X, tiltY: REST_Y, lift: 0 });
+  const targetRef = useRef({
+    scaleX: 1, scaleY: 1, rotX: REST_TILT_X, rotY: REST_TILT_Y, rotZ: 0, translateZ: 0,
+  });
   const lastTimeRef = useRef(0);
   const isAnimatingRef = useRef(false);
 
@@ -106,48 +92,41 @@ function JellyMaterialCardInner({
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // ── Animation loop ──
-  const animate = useCallback((ts: number) => {
-    if (!cardRef.current) return;
-    const dt = lastTimeRef.current ? Math.min((ts - lastTimeRef.current) / 1000, 0.05) : 0.016;
-    lastTimeRef.current = ts;
+  // ── Spring animation loop ──
+  const animate = useCallback((timestamp: number) => {
+    if (!cubeRef.current) return;
+    const dt = lastTimeRef.current ? Math.min((timestamp - lastTimeRef.current) / 1000, 0.05) : 0.016;
+    lastTimeRef.current = timestamp;
 
     const s = springRef.current;
     const t = targetRef.current;
+    s.scaleX = stepSpring(s.scaleX, t.scaleX, JELLY_SPRING, dt);
+    s.scaleY = stepSpring(s.scaleY, t.scaleY, JELLY_SPRING, dt);
+    s.rotX = stepSpring(s.rotX, t.rotX, JELLY_SPRING, dt);
+    s.rotY = stepSpring(s.rotY, t.rotY, JELLY_SPRING, dt);
+    s.rotZ = stepSpring(s.rotZ, t.rotZ, JELLY_SPRING, dt);
+    s.translateZ = stepSpring(s.translateZ, t.translateZ, JELLY_SPRING, dt);
 
-    s.squashX = stepSpring(s.squashX, 0, SQUASH_SPRING, dt);
-    s.squashY = stepSpring(s.squashY, 0, SQUASH_SPRING, dt);
-    s.wiggle = stepSpring(s.wiggle, 0, WIGGLE_SPRING, dt);
-    s.tiltX = stepSpring(s.tiltX, t.tiltX, TILT_SPRING, dt);
-    s.tiltY = stepSpring(s.tiltY, t.tiltY, TILT_SPRING, dt);
-    s.lift = stepSpring(s.lift, t.lift, TILT_SPRING, dt);
-
-    const sx = 1 - s.squashX.value * 0.06;
-    const sy = 1 + s.squashX.value * 0.04;
-    const rz = s.wiggle.value * 2;
-
-    cardRef.current.style.transform =
-      `perspective(900px) rotateX(${s.tiltX.value.toFixed(2)}deg) rotateY(${s.tiltY.value.toFixed(2)}deg) rotateZ(${rz.toFixed(2)}deg) scale(${sx.toFixed(4)}, ${sy.toFixed(4)}) translateZ(${s.lift.value.toFixed(1)}px)`;
+    cubeRef.current.style.transform =
+      `rotateX(${s.rotX.value.toFixed(3)}deg) rotateY(${s.rotY.value.toFixed(3)}deg) rotateZ(${s.rotZ.value.toFixed(3)}deg) scale3d(${s.scaleX.value.toFixed(4)}, ${s.scaleY.value.toFixed(4)}, 1) translateZ(${s.translateZ.value.toFixed(2)}px)`;
 
     const settled =
-      Math.abs(s.squashX.velocity) < 0.001 && Math.abs(s.squashX.value) < 0.001 &&
-      Math.abs(s.squashY.velocity) < 0.001 && Math.abs(s.squashY.value) < 0.001 &&
-      Math.abs(s.wiggle.velocity) < 0.001 && Math.abs(s.wiggle.value) < 0.001 &&
-      Math.abs(s.tiltX.velocity) < 0.01 && Math.abs(s.tiltX.value - t.tiltX) < 0.01 &&
-      Math.abs(s.tiltY.velocity) < 0.01 && Math.abs(s.tiltY.value - t.tiltY) < 0.01 &&
-      Math.abs(s.lift.velocity) < 0.01 && Math.abs(s.lift.value - t.lift) < 0.01;
+      Math.abs(s.scaleX.velocity) < 0.0003 && Math.abs(s.scaleX.value - t.scaleX) < 0.0003 &&
+      Math.abs(s.scaleY.velocity) < 0.0003 && Math.abs(s.scaleY.value - t.scaleY) < 0.0003 &&
+      Math.abs(s.rotX.velocity) < 0.003 && Math.abs(s.rotX.value - t.rotX) < 0.003 &&
+      Math.abs(s.rotY.velocity) < 0.003 && Math.abs(s.rotY.value - t.rotY) < 0.003 &&
+      Math.abs(s.rotZ.velocity) < 0.003 && Math.abs(s.rotZ.value - t.rotZ) < 0.003 &&
+      Math.abs(s.translateZ.velocity) < 0.003 && Math.abs(s.translateZ.value - t.translateZ) < 0.003;
 
     if (settled) {
-      Object.assign(s, {
-        squashX: { value: 0, velocity: 0 },
-        squashY: { value: 0, velocity: 0 },
-        wiggle: { value: 0, velocity: 0 },
-        tiltX: { value: t.tiltX, velocity: 0 },
-        tiltY: { value: t.tiltY, velocity: 0 },
-        lift: { value: t.lift, velocity: 0 },
-      });
-      cardRef.current.style.transform =
-        `perspective(900px) rotateX(${t.tiltX}deg) rotateY(${t.tiltY}deg) rotateZ(0deg) scale(1, 1) translateZ(${t.lift}px)`;
+      s.scaleX = { value: t.scaleX, velocity: 0 };
+      s.scaleY = { value: t.scaleY, velocity: 0 };
+      s.rotX = { value: t.rotX, velocity: 0 };
+      s.rotY = { value: t.rotY, velocity: 0 };
+      s.rotZ = { value: t.rotZ, velocity: 0 };
+      s.translateZ = { value: t.translateZ, velocity: 0 };
+      cubeRef.current.style.transform =
+        `rotateX(${t.rotX}deg) rotateY(${t.rotY}deg) rotateZ(${t.rotZ}deg) scale3d(${t.scaleX}, ${t.scaleY}, 1) translateZ(${t.translateZ}px)`;
       isAnimatingRef.current = false;
       return;
     }
@@ -161,21 +140,15 @@ function JellyMaterialCardInner({
     rafRef.current = requestAnimationFrame(animate);
   }, [animate]);
 
-  const triggerImpact = useCallback((strength = 1) => {
+  const triggerWobble = useCallback((mult = 1) => {
     if (prefersReducedMotion) return;
     const s = springRef.current;
-    s.squashX.velocity += -5 * strength;
-    s.squashY.velocity += 3 * strength;
-    s.wiggle.velocity += (Math.random() > 0.5 ? 10 : -10) * strength;
-    startAnimation();
-  }, [prefersReducedMotion, startAnimation]);
-
-  const triggerAnticipation = useCallback(() => {
-    if (prefersReducedMotion) return;
-    const s = springRef.current;
-    s.squashX.velocity += -2;
-    s.squashY.velocity += 1;
-    s.wiggle.velocity += (Math.random() > 0.5 ? 1 : -1);
+    s.scaleX.velocity += (8 + Math.random() * 5) * mult;
+    s.scaleY.velocity += (-7 - Math.random() * 4) * mult;
+    s.rotX.velocity += (20 + Math.random() * 14) * mult;
+    s.rotY.velocity += (-16 - Math.random() * 10) * mult;
+    s.rotZ.velocity += (4 + Math.random() * 5) * mult * (Math.random() > 0.5 ? 1 : -1);
+    s.translateZ.velocity += (32 + Math.random() * 22) * mult;
     startAnimation();
   }, [prefersReducedMotion, startAnimation]);
 
@@ -183,94 +156,125 @@ function JellyMaterialCardInner({
   useEffect(() => {
     if (!jellyMode || prefersReducedMotion || !isInView) return;
     let phase = 0;
-    const iv = setInterval(() => {
-      phase++;
+    const interval = setInterval(() => {
+      phase += 1;
       const s = springRef.current;
-      s.squashX.velocity += Math.sin(phase * 0.7) * 0.3;
-      s.wiggle.velocity += Math.sin(phase * 1.1) * 0.4;
+      s.scaleX.velocity += Math.sin(phase * 0.6) * 0.6;
+      s.scaleY.velocity += Math.cos(phase * 0.9) * 0.5;
+      s.rotX.velocity += Math.sin(phase * 0.4) * 1.0;
+      s.rotY.velocity += Math.cos(phase * 0.7) * 0.8;
+      s.rotZ.velocity += Math.sin(phase * 1.1) * 0.4;
+      s.translateZ.velocity += Math.cos(phase * 0.5) * 0.7;
       startAnimation();
-    }, 2500);
-    return () => clearInterval(iv);
+    }, 2000);
+    return () => clearInterval(interval);
   }, [jellyMode, prefersReducedMotion, isInView, startAnimation]);
 
   // Scroll-into-view wobble
   useEffect(() => {
     if (!jellyMode || prefersReducedMotion) return;
-    const el = cardRef.current;
+    const el = containerRef.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
+    const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((e) => {
-          setIsInView(e.isIntersecting);
-          if (e.isIntersecting && !hasEnteredView) {
+        entries.forEach((entry) => {
+          setIsInView(entry.isIntersecting);
+          if (entry.isIntersecting && !hasEnteredView) {
             setHasEnteredView(true);
             const rect = el.getBoundingClientRect();
             const delay = (rect.left / window.innerWidth) * 200;
-            setTimeout(() => triggerImpact(1), delay);
+            setTimeout(() => triggerWobble(1.5), delay);
           }
         });
       },
       { threshold: 0.1, rootMargin: "0px 0px -30px 0px" }
     );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [jellyMode, prefersReducedMotion, triggerImpact, hasEnteredView]);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [jellyMode, prefersReducedMotion, triggerWobble, hasEnteredView]);
 
   useEffect(() => { if (!jellyMode) { setHasEnteredView(false); setIsInView(false); } }, [jellyMode]);
-  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
+  useEffect(() => { return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }; }, []);
 
-  // ── Pointer handlers ──
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (prefersReducedMotion || !jellyMode) return;
-    const el = cardRef.current;
+    const el = containerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
     setPointerPos({ x, y });
-    targetRef.current.tiltX = REST_X + (0.5 - y) * 8 * intensity;
-    targetRef.current.tiltY = REST_Y + (x - 0.5) * 10 * intensity;
+    targetRef.current.rotX = REST_TILT_X + (0.5 - y) * 12 * intensity;
+    targetRef.current.rotY = REST_TILT_Y + (x - 0.5) * 15 * intensity;
+    targetRef.current.rotZ = (x - 0.5) * (y - 0.5) * 4 * intensity;
     startAnimation();
   }, [prefersReducedMotion, jellyMode, intensity, startAnimation]);
 
   const handlePointerEnter = useCallback(() => {
     setHover(true);
-    if (!jellyMode || prefersReducedMotion) return;
-    targetRef.current.lift = 6;
-    triggerAnticipation();
-  }, [jellyMode, prefersReducedMotion, triggerAnticipation]);
+    if (jellyMode && !prefersReducedMotion) {
+      targetRef.current.scaleX = 1.02;
+      targetRef.current.scaleY = 1.02;
+      targetRef.current.translateZ = 12;
+      const s = springRef.current;
+      s.scaleX.velocity += 3.5;
+      s.scaleY.velocity -= 3;
+      s.rotX.velocity += 6;
+      s.rotZ.velocity += 1.5;
+      startAnimation();
+    }
+  }, [jellyMode, prefersReducedMotion, startAnimation]);
 
   const handlePointerLeave = useCallback(() => {
     setHover(false);
     setPointerPos({ x: 0.5, y: 0.5 });
-    if (!jellyMode || prefersReducedMotion) return;
-    targetRef.current.tiltX = REST_X;
-    targetRef.current.tiltY = REST_Y;
-    targetRef.current.lift = 0;
-    triggerImpact(0.4);
-  }, [jellyMode, prefersReducedMotion, triggerImpact]);
+    if (jellyMode) {
+      targetRef.current.scaleX = 1;
+      targetRef.current.scaleY = 1;
+      targetRef.current.rotX = REST_TILT_X;
+      targetRef.current.rotY = REST_TILT_Y;
+      targetRef.current.rotZ = 0;
+      targetRef.current.translateZ = 0;
+      const s = springRef.current;
+      s.scaleX.velocity += -2.5;
+      s.scaleY.velocity += 2.5;
+      s.rotX.velocity += -5;
+      s.rotZ.velocity += -1;
+      startAnimation();
+    }
+  }, [jellyMode, startAnimation]);
 
   const handlePointerDown = useCallback(() => {
     if (!jellyMode || prefersReducedMotion) return;
-    const s = springRef.current;
-    s.squashX.velocity += -3;
-    s.squashY.velocity += 2;
-    targetRef.current.lift = -2;
+    targetRef.current.scaleX = 1.07;
+    targetRef.current.scaleY = 0.93;
+    targetRef.current.translateZ = -10;
     startAnimation();
   }, [jellyMode, prefersReducedMotion, startAnimation]);
 
   const handlePointerUp = useCallback(() => {
     if (!jellyMode || prefersReducedMotion) return;
-    targetRef.current.lift = hover ? 6 : 0;
-    triggerImpact(0.8);
-  }, [jellyMode, prefersReducedMotion, hover, triggerImpact]);
+    targetRef.current.scaleX = hover ? 1.02 : 1;
+    targetRef.current.scaleY = hover ? 1.02 : 1;
+    targetRef.current.translateZ = hover ? 12 : 0;
+    const s = springRef.current;
+    s.scaleX.velocity += -8;
+    s.scaleY.velocity += 9;
+    s.rotX.velocity += 14;
+    s.rotZ.velocity += 3;
+    s.translateZ.velocity += 25;
+    startAnimation();
+  }, [jellyMode, prefersReducedMotion, hover, startAnimation]);
 
-  // ── Non-jelly mode ──
+  // ═══════════════════════════════════════════════════════
+  // Standard mode — clean frosted glass card
+  // ═══════════════════════════════════════════════════════
   if (!jellyMode) {
     return (
       <div
-        className={`relative rounded-2xl border border-border/50 bg-card/60 backdrop-blur-md transition-all duration-300 hover:shadow-lg hover:border-border/80 ${className}`}
-        style={style}
+        ref={containerRef}
+        className={`relative overflow-hidden bg-card/60 backdrop-blur-md border border-border/30 shadow-sm hover:bg-card/80 hover:border-border/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-500 ${className}`}
+        style={{ borderRadius: borderRadius || "1.25rem", ...style }}
         onClick={onClick}
         {...rest}
       >
@@ -280,137 +284,211 @@ function JellyMaterialCardInner({
   }
 
   // ═══════════════════════════════════════════════════════
-  // Material calculations
+  // JELLY MODE — Ultra-transparent gel cube
   // ═══════════════════════════════════════════════════════
-  const br = borderRadius || "1.25rem";
-  const px = pointerPos.x;
-  const py = pointerPos.y;
 
-  // Fresnel: edges bright, center clear
-  const edgeAlpha = fresnelAlpha(1) * intensity;
-  const midAlpha = fresnelAlpha(0.5) * intensity;
+  const specX = pointerPos.x * 100;
+  const specY = pointerPos.y * 100;
+  const depth = JELLY_DEPTH;
+  const br = ORGANIC_BR;
 
-  // Beer-Lambert: body tint (very subtle)
-  const bodyAlpha = beerLambertAlpha(0.12, 2.5) * intensity;
-
-  // ── Gel body ──
+  // ── L1: Ultra-transparent gel body ──
+  // Real jelly is 90-97% transparent. Body alpha is VERY low.
+  // The "gel" look comes from backdrop-filter distortion + edge effects.
+  const bodyAlpha = isDark ? 0.08 : 0.06;
   const gelBody = isDark
-    ? `radial-gradient(ellipse 75% 70% at 50% 48%,
-        hsla(${hue}, 30%, 25%, ${bodyAlpha * 0.15}) 0%,
-        hsla(${hue}, 40%, 20%, ${bodyAlpha * 0.5}) 55%,
-        hsla(${hue}, 50%, 15%, ${bodyAlpha * 0.9}) 100%)`
-    : `radial-gradient(ellipse 75% 70% at 50% 48%,
-        hsla(${hue}, 25%, 97%, ${bodyAlpha * 0.12}) 0%,
-        hsla(${hue}, 30%, 92%, ${bodyAlpha * 0.4}) 55%,
-        hsla(${hue}, 38%, 86%, ${bodyAlpha * 0.75}) 100%)`;
+    ? `hsla(${hue}, 45%, 30%, ${bodyAlpha})`
+    : `hsla(${hue}, 35%, 85%, ${bodyAlpha})`;
 
-  // ── Fresnel edge gradient ──
-  const fresnelGrad = isDark
-    ? `radial-gradient(ellipse 80% 75% at 50% 50%,
-        transparent 35%,
-        hsla(${hue}, 55%, 60%, ${midAlpha * 0.5}) 65%,
-        hsla(${hue}, 60%, 70%, ${edgeAlpha * 0.85}) 85%,
-        hsla(${hue}, 65%, 78%, ${edgeAlpha}) 100%)`
-    : `radial-gradient(ellipse 80% 75% at 50% 50%,
-        transparent 35%,
-        hsla(${hue}, 40%, 82%, ${midAlpha * 0.35}) 65%,
-        hsla(${hue}, 48%, 76%, ${edgeAlpha * 0.65}) 85%,
-        hsla(${hue}, 55%, 70%, ${edgeAlpha * 0.85}) 100%)`;
+  // ── L2: Fresnel edge gradient — THE MAIN VISUAL CUE ──
+  // Real transparent materials: clear center, colored opaque edges.
+  // This is what makes it look like GEL, not glass.
+  const fA = isDark ? 0.7 : 0.55; // Fresnel alpha — strong!
+  const fEdge = [
+    // Top edge — brightest (light source above)
+    `linear-gradient(180deg,
+      hsla(${hue}, 70%, ${isDark ? 75 : 92}%, ${fA * 1.3}) 0%,
+      hsla(${hue}, 60%, ${isDark ? 60 : 85}%, ${fA * 0.7}) 6%,
+      hsla(${hue}, 50%, ${isDark ? 50 : 80}%, ${fA * 0.2}) 15%,
+      transparent 30%)`,
+    // Bottom edge — darker, denser
+    `linear-gradient(0deg,
+      hsla(${hue}, 55%, ${isDark ? 40 : 60}%, ${fA * 0.9}) 0%,
+      hsla(${hue}, 45%, ${isDark ? 35 : 68}%, ${fA * 0.4}) 6%,
+      hsla(${hue}, 35%, ${isDark ? 30 : 72}%, ${fA * 0.1}) 18%,
+      transparent 30%)`,
+    // Left edge
+    `linear-gradient(90deg,
+      hsla(${hue + 8}, 60%, ${isDark ? 65 : 88}%, ${fA * 1.0}) 0%,
+      hsla(${hue + 8}, 50%, ${isDark ? 55 : 82}%, ${fA * 0.4}) 5%,
+      transparent 22%)`,
+    // Right edge
+    `linear-gradient(270deg,
+      hsla(${hue - 8}, 60%, ${isDark ? 65 : 88}%, ${fA * 1.0}) 0%,
+      hsla(${hue - 8}, 50%, ${isDark ? 55 : 82}%, ${fA * 0.4}) 5%,
+      transparent 22%)`,
+    // Radial clear-out center (reinforces clear center)
+    `radial-gradient(ellipse 70% 65% at 50% 50%,
+      transparent 0%,
+      transparent 50%,
+      hsla(${hue}, 55%, ${isDark ? 55 : 80}%, ${fA * 0.35}) 85%,
+      hsla(${hue}, 60%, ${isDark ? 60 : 75}%, ${fA * 0.5}) 100%)`,
+  ].join(", ");
 
-  // ── Subsurface scattering ──
-  const sssGlow = isDark
-    ? `radial-gradient(ellipse 55% 50% at ${35 + px * 30}% ${35 + py * 30}%,
-        hsla(${hue + 15}, 50%, 55%, 0.12) 0%,
-        transparent 70%)`
-    : `radial-gradient(ellipse 55% 50% at ${35 + px * 30}% ${35 + py * 30}%,
-        hsla(${hue + 15}, 40%, 88%, 0.15) 0%,
-        transparent 70%)`;
-
-  // ── Chromatic aberration at corners ──
+  // ── L3: Chromatic aberration — rainbow edge splitting ──
+  // Light splits into component colors at gel boundaries
+  const cA = isDark ? 0.22 : 0.18;
   const chromatic = [
-    `radial-gradient(circle at 0% 0%, hsla(${hue + 60}, 70%, ${isDark ? 65 : 85}%, 0.12) 0%, transparent 30%)`,
-    `radial-gradient(circle at 100% 0%, hsla(${hue - 40}, 65%, ${isDark ? 60 : 82}%, 0.1) 0%, transparent 28%)`,
-    `radial-gradient(circle at 0% 100%, hsla(${hue + 90}, 60%, ${isDark ? 58 : 80}%, 0.08) 0%, transparent 25%)`,
-    `radial-gradient(circle at 100% 100%, hsla(${hue - 60}, 55%, ${isDark ? 55 : 78}%, 0.1) 0%, transparent 28%)`,
+    // Warm shift (red/orange) — top-left corner
+    `linear-gradient(135deg,
+      hsla(${hue + 50}, 85%, ${isDark ? 70 : 80}%, ${cA}) 0%,
+      transparent 18%)`,
+    // Cool shift (blue/violet) — bottom-right corner
+    `linear-gradient(315deg,
+      hsla(${hue - 50}, 85%, ${isDark ? 70 : 80}%, ${cA}) 0%,
+      transparent 18%)`,
+    // Cyan shift — top-right
+    `linear-gradient(225deg,
+      hsla(${hue + 90}, 80%, ${isDark ? 65 : 75}%, ${cA * 0.7}) 0%,
+      transparent 14%)`,
+    // Magenta shift — bottom-left
+    `linear-gradient(45deg,
+      hsla(${hue - 90}, 80%, ${isDark ? 65 : 75}%, ${cA * 0.7}) 0%,
+      transparent 14%)`,
   ].join(", ");
 
-  // ── Caustics ──
+  // ── L4: Subsurface scattering glow ──
+  // Light enters gel, bounces internally, exits at different point
+  const sssA = isDark ? 0.2 : 0.15;
+  const sssGlow = `radial-gradient(ellipse 85% 75% at 50% 55%,
+    hsla(${hue}, ${isDark ? 55 : 50}%, ${isDark ? 50 : 82}%, ${sssA}) 0%,
+    hsla(${hue + 15}, ${isDark ? 50 : 45}%, ${isDark ? 42 : 76}%, ${sssA * 0.5}) 40%,
+    transparent 70%)`;
+
+  // ── L5: Animated caustic light concentrations ──
+  // Light focuses at certain points inside gel due to curved surfaces
+  const cx1 = 15 + pointerPos.x * 70;
+  const cy1 = 10 + pointerPos.y * 80;
+  const cx2 = 85 - pointerPos.x * 60;
+  const cy2 = 90 - pointerPos.y * 70;
+  const caA = hover ? (isDark ? 0.4 : 0.3) : (isDark ? 0.18 : 0.14);
   const caustics = [
-    `radial-gradient(ellipse 20% 15% at ${30 + px * 40}% ${25 + py * 50}%,
-      hsla(${hue + 20}, 60%, ${isDark ? 75 : 95}%, ${isDark ? 0.2 : 0.25}) 0%, transparent 100%)`,
-    `radial-gradient(ellipse 15% 20% at ${60 + px * 20}% ${50 + py * 30}%,
-      hsla(${hue - 10}, 55%, ${isDark ? 70 : 92}%, ${isDark ? 0.12 : 0.18}) 0%, transparent 100%)`,
+    `radial-gradient(ellipse 45% 40% at ${cx1}% ${cy1}%,
+      hsla(${hue + 20}, 75%, ${isDark ? 75 : 90}%, ${caA}) 0%,
+      hsla(${hue + 20}, 65%, ${isDark ? 65 : 85}%, ${caA * 0.35}) 35%,
+      transparent 65%)`,
+    `radial-gradient(ellipse 40% 35% at ${cx2}% ${cy2}%,
+      hsla(${hue - 15}, 70%, ${isDark ? 70 : 88}%, ${caA * 0.7}) 0%,
+      hsla(${hue - 15}, 60%, ${isDark ? 60 : 82}%, ${caA * 0.2}) 30%,
+      transparent 60%)`,
+    // Sharp caustic sparkle
+    `radial-gradient(circle 12% at ${30 + pointerPos.x * 40}% ${20 + pointerPos.y * 60}%,
+      rgba(255, 255, 255, ${caA * 0.6}) 0%,
+      transparent 100%)`,
   ].join(", ");
 
-  // ── Specular highlight ──
-  const specular = `radial-gradient(ellipse 35% 30% at ${px * 100}% ${py * 100}%,
-    hsla(0, 0%, 100%, ${hover ? (isDark ? 0.3 : 0.45) : 0}) 0%,
-    hsla(0, 0%, 100%, ${hover ? (isDark ? 0.08 : 0.12) : 0}) 50%,
-    transparent 100%)`;
+  // ── L6: Wet specular highlight (follows pointer) ──
+  const spA = hover ? (isDark ? 0.6 : 0.8) : (isDark ? 0.15 : 0.2);
+  const specular = `radial-gradient(ellipse 50% 40% at ${specX}% ${specY}%,
+    rgba(255,255,255,${spA}) 0%,
+    rgba(255,255,255,${spA * 0.4}) 22%,
+    rgba(255,255,255,${spA * 0.08}) 50%,
+    transparent 70%)`;
 
-  // ── Top sheen ──
+  // ── L7: Top surface sheen (wet gel surface tension line) ──
   const topSheen = isDark
-    ? `linear-gradient(175deg,
-        hsla(0, 0%, 100%, 0.08) 0%,
-        hsla(0, 0%, 100%, 0.02) 25%,
-        transparent 50%)`
-    : `linear-gradient(175deg,
-        hsla(0, 0%, 100%, 0.5) 0%,
-        hsla(0, 0%, 100%, 0.15) 25%,
-        transparent 50%)`;
+    ? `linear-gradient(172deg,
+        rgba(255,255,255,0.4) 0%,
+        rgba(255,255,255,0.18) 3.5%,
+        rgba(255,255,255,0.05) 12%,
+        transparent 25%)`
+    : `linear-gradient(172deg,
+        rgba(255,255,255,0.95) 0%,
+        rgba(255,255,255,0.5) 3.5%,
+        rgba(255,255,255,0.15) 12%,
+        transparent 25%)`;
 
-  // ── Border colors (Fresnel-based) ──
-  const bdrTop = isDark
-    ? `hsla(${hue}, 50%, 70%, ${edgeAlpha * 0.6})`
-    : `hsla(${hue}, 40%, 80%, ${edgeAlpha * 0.5})`;
-  const bdrBottom = isDark
-    ? `hsla(${hue}, 45%, 50%, ${edgeAlpha * 0.8})`
-    : `hsla(${hue}, 35%, 65%, ${edgeAlpha * 0.6})`;
+  // ── L8: Internal refraction pattern (animated CSS) ──
+  // Simulates light bending through the gel volume
+  const refractionPattern = [
+    `radial-gradient(ellipse 30% 25% at 25% 35%,
+      hsla(${hue + 30}, 60%, ${isDark ? 65 : 88}%, 0.12) 0%,
+      transparent 100%)`,
+    `radial-gradient(ellipse 25% 30% at 75% 65%,
+      hsla(${hue - 20}, 55%, ${isDark ? 60 : 85}%, 0.1) 0%,
+      transparent 100%)`,
+    `radial-gradient(ellipse 35% 20% at 50% 80%,
+      hsla(${hue + 10}, 50%, ${isDark ? 55 : 82}%, 0.08) 0%,
+      transparent 100%)`,
+  ].join(", ");
 
-  // ── Inner shadow ──
+  // ── Inner shadows (gel depth — looking INTO thick gel) ──
   const innerShadow = isDark
-    ? `inset 0 1px 2px hsla(0, 0%, 100%, 0.12), inset 0 -2px 6px hsla(${hue}, 40%, 20%, 0.3)`
-    : `inset 0 2px 4px hsla(0, 0%, 100%, 0.6), inset 0 -2px 8px hsla(${hue}, 30%, 70%, 0.15)`;
+    ? `inset 0 2px 0 rgba(255,255,255,0.3),
+       inset 0 -3px 0 rgba(0,0,0,0.3),
+       inset 3px 0 0 rgba(255,255,255,0.12),
+       inset -3px 0 0 rgba(255,255,255,0.12),
+       inset 0 12px 30px rgba(255,255,255,0.05),
+       inset 0 -12px 30px rgba(0,0,0,0.12)`
+    : `inset 0 2px 0 rgba(255,255,255,0.95),
+       inset 0 -3px 0 rgba(0,0,0,0.04),
+       inset 3px 0 0 rgba(255,255,255,0.6),
+       inset -3px 0 0 rgba(255,255,255,0.6),
+       inset 0 12px 30px rgba(255,255,255,0.3),
+       inset 0 -12px 30px rgba(0,0,0,0.03)`;
 
-  // ── Outer shadow (depth cue) ──
-  const outerShadow = isDark
-    ? `0 ${DEPTH}px ${DEPTH * 1.5}px -${DEPTH * 0.3}px hsla(${hue}, 40%, 10%, 0.35),
-       0 ${DEPTH * 0.4}px ${DEPTH * 0.6}px -2px hsla(${hue}, 50%, 20%, 0.25),
-       0 2px 4px hsla(0, 0%, 0%, 0.2)`
-    : `0 ${DEPTH}px ${DEPTH * 2}px -${DEPTH * 0.4}px hsla(${hue}, 30%, 50%, 0.18),
-       0 ${DEPTH * 0.5}px ${DEPTH * 0.8}px -2px hsla(${hue}, 35%, 60%, 0.12),
-       0 2px 6px hsla(${hue}, 20%, 40%, 0.08)`;
+  // ── Outer shadow (gel slab sitting on surface) ──
+  const outerShadow = hover
+    ? isDark
+      ? `0 ${depth + 12}px ${depth * 3}px hsla(${hue}, 55%, 30%, 0.4),
+         0 ${depth + 4}px ${depth}px rgba(0,0,0,0.5),
+         0 ${depth * 2.5}px ${depth * 5}px hsla(${hue}, 50%, 28%, 0.25)`
+      : `0 ${depth + 12}px ${depth * 3}px hsla(${hue}, 45%, 55%, 0.18),
+         0 ${depth + 4}px ${depth}px rgba(0,0,0,0.06),
+         0 ${depth * 2.5}px ${depth * 5}px hsla(${hue}, 40%, 60%, 0.08)`
+    : isDark
+      ? `0 ${depth}px ${depth * 2}px rgba(0,0,0,0.35),
+         0 ${depth / 2}px ${depth * 0.6}px rgba(0,0,0,0.25)`
+      : `0 ${depth}px ${depth * 2}px rgba(0,0,0,0.08),
+         0 ${depth / 2}px ${depth * 0.6}px rgba(0,0,0,0.04)`;
 
-  // ── Thickness strip colors ──
-  const bottomStripBg = isDark
+  // ── Border colors (gel edge refraction — subtle colored borders) ──
+  const bdrTop = isDark
+    ? `hsla(${hue}, 60%, 72%, ${hover ? 0.55 : 0.35})`
+    : `hsla(${hue}, 50%, 90%, ${hover ? 0.75 : 0.5})`;
+  const bdrBottom = isDark
+    ? `hsla(${hue}, 45%, 35%, ${hover ? 0.5 : 0.3})`
+    : `hsla(${hue}, 35%, 70%, ${hover ? 0.45 : 0.3})`;
+
+  // ── Side face gradients (translucent gel thickness) ──
+  const bottomSideGrad = isDark
     ? `linear-gradient(180deg,
-        hsla(${hue}, 50%, 30%, 0.55) 0%,
-        hsla(${hue}, 45%, 20%, 0.35) 60%,
-        hsla(${hue}, 40%, 15%, 0.15) 100%)`
+        hsla(${hue}, 55%, 50%, 0.35) 0%,
+        hsla(${hue}, 50%, 32%, 0.55) 50%,
+        hsla(${hue}, 45%, 22%, 0.65) 100%)`
     : `linear-gradient(180deg,
-        hsla(${hue}, 38%, 72%, 0.45) 0%,
-        hsla(${hue}, 32%, 80%, 0.3) 60%,
-        hsla(${hue}, 28%, 88%, 0.12) 100%)`;
+        hsla(${hue}, 45%, 90%, 0.4) 0%,
+        hsla(${hue}, 40%, 80%, 0.3) 50%,
+        hsla(${hue}, 35%, 72%, 0.25) 100%)`;
 
-  const rightStripBg = isDark
+  const rightSideGrad = isDark
     ? `linear-gradient(90deg,
-        hsla(${hue}, 48%, 28%, 0.45) 0%,
-        hsla(${hue}, 42%, 18%, 0.3) 60%,
-        hsla(${hue}, 38%, 12%, 0.1) 100%)`
+        hsla(${hue}, 50%, 45%, 0.3) 0%,
+        hsla(${hue}, 45%, 28%, 0.5) 50%,
+        hsla(${hue}, 40%, 20%, 0.6) 100%)`
     : `linear-gradient(90deg,
-        hsla(${hue}, 35%, 70%, 0.35) 0%,
-        hsla(${hue}, 30%, 78%, 0.22) 60%,
-        hsla(${hue}, 25%, 86%, 0.08) 100%)`;
+        hsla(${hue}, 40%, 88%, 0.35) 0%,
+        hsla(${hue}, 36%, 78%, 0.28) 50%,
+        hsla(${hue}, 32%, 70%, 0.22) 100%)`;
 
   return (
     <div
-      ref={cardRef}
+      ref={containerRef}
       className={`relative group cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary/70 ${className}`}
       style={{
-        willChange: "transform",
-        transform: `perspective(900px) rotateX(${REST_X}deg) rotateY(${REST_Y}deg) rotateZ(0deg) scale(1, 1) translateZ(0px)`,
-        transformOrigin: "50% 60%",
-        marginBottom: `${DEPTH + 4}px`,
+        perspective: "650px",
+        perspectiveOrigin: "38% 25%",
+        marginBottom: `${depth * 0.9}px`,
         ...style,
       }}
       onPointerMove={handlePointerMove}
@@ -421,177 +499,278 @@ function JellyMaterialCardInner({
       onClick={onClick}
       {...rest}
     >
-      {/* ═══ MAIN GEL SURFACE ═══ */}
+      {/* 3D Cube Container */}
       <div
-        className="relative overflow-hidden"
+        ref={cubeRef}
         style={{
-          borderRadius: br,
-          boxShadow: `${innerShadow}, ${outerShadow}`,
-          borderStyle: "solid",
-          borderTopWidth: "1.5px",
-          borderLeftWidth: "1.5px",
-          borderRightWidth: "2px",
-          borderBottomWidth: "2.5px",
-          borderTopColor: bdrTop,
-          borderLeftColor: bdrTop,
-          borderRightColor: bdrBottom,
-          borderBottomColor: bdrBottom,
+          transformStyle: "preserve-3d" as any,
+          willChange: "transform",
+          transform: `rotateX(${REST_TILT_X}deg) rotateY(${REST_TILT_Y}deg) rotateZ(0deg) scale3d(1, 1, 1) translateZ(0px)`,
+          transformOrigin: "50% 50%",
         }}
       >
-        {/* L1: Gel body — nearly invisible center */}
+        {/* ═══ TOP FACE — Main visible surface ═══ */}
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="relative overflow-hidden"
           style={{
             borderRadius: br,
-            background: gelBody,
-            backdropFilter: `blur(22px) saturate(1.7) brightness(${isDark ? 1.05 : 1.08})`,
-            WebkitBackdropFilter: `blur(22px) saturate(1.7) brightness(${isDark ? 1.05 : 1.08})`,
-            zIndex: 0,
-          }}
-          aria-hidden="true"
-        />
-
-        {/* L2: Fresnel edge reflectance */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ borderRadius: br, background: fresnelGrad, zIndex: 1 }}
-          aria-hidden="true"
-        />
-
-        {/* L3: Subsurface scattering glow */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            borderRadius: br,
-            background: sssGlow,
-            zIndex: 2,
-            mixBlendMode: isDark ? "screen" : "normal",
-          }}
-          aria-hidden="true"
-        />
-
-        {/* L4: Chromatic aberration at corners */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            borderRadius: br,
-            background: chromatic,
-            zIndex: 3,
-            mixBlendMode: "screen",
-          }}
-          aria-hidden="true"
-        />
-
-        {/* L5: Caustic light concentrations */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            borderRadius: br,
-            background: caustics,
-            zIndex: 4,
-            opacity: hover ? 1 : 0.5,
-            transition: "opacity 0.4s ease",
-            mixBlendMode: "screen",
-          }}
-          aria-hidden="true"
-        />
-
-        {/* L6: Specular highlight */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            borderRadius: br,
-            background: specular,
-            zIndex: 5,
-            transition: "opacity 0.3s ease",
-          }}
-          aria-hidden="true"
-        />
-
-        {/* L7: Top surface sheen */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ borderRadius: br, background: topSheen, zIndex: 6 }}
-          aria-hidden="true"
-        />
-
-        {/* L8: Animated internal refraction drift */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            borderRadius: br,
-            background: [
-              `radial-gradient(ellipse 28% 22% at 25% 35%,
-                hsla(${hue + 30}, 55%, ${isDark ? 65 : 90}%, 0.08) 0%, transparent 100%)`,
-              `radial-gradient(ellipse 22% 28% at 75% 65%,
-                hsla(${hue - 20}, 50%, ${isDark ? 60 : 87}%, 0.06) 0%, transparent 100%)`,
-            ].join(", "),
-            zIndex: 3,
-            opacity: 0.6,
-            animation: "jelly-refraction-drift 14s ease-in-out infinite alternate",
-          }}
-          aria-hidden="true"
-        />
-
-        {/* Content */}
-        <div
-          className="relative z-10"
-          style={{
-            textShadow: isDark
-              ? "0 1px 3px rgba(0,0,0,0.5), 0 0 8px rgba(0,0,0,0.25)"
-              : "0 1px 2px rgba(255,255,255,0.8), 0 0 4px rgba(255,255,255,0.4), 0 -1px 1px rgba(0,0,0,0.03)",
+            transform: `translateZ(${depth}px)`,
+            backfaceVisibility: "hidden",
+            boxShadow: `${innerShadow}, ${outerShadow}`,
+            borderStyle: "solid",
+            borderTopWidth: "1.5px",
+            borderLeftWidth: "1.5px",
+            borderRightWidth: "2px",
+            borderBottomWidth: "2.5px",
+            borderTopColor: bdrTop,
+            borderLeftColor: bdrTop,
+            borderRightColor: bdrBottom,
+            borderBottomColor: bdrBottom,
           }}
         >
-          {children}
+          {/* L1: Ultra-transparent gel body + backdrop blur */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              borderRadius: br,
+              backgroundColor: gelBody,
+              backdropFilter: "blur(22px) saturate(1.9) brightness(1.08)",
+              WebkitBackdropFilter: "blur(22px) saturate(1.9) brightness(1.08)",
+              zIndex: 0,
+            }}
+            aria-hidden="true"
+          />
+
+          {/* L2: Fresnel edge gradient — THE KEY LAYER */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ borderRadius: br, background: fEdge, zIndex: 1 }}
+            aria-hidden="true"
+          />
+
+          {/* L3: Chromatic aberration at corners */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              borderRadius: br,
+              background: chromatic,
+              zIndex: 2,
+              mixBlendMode: "screen",
+            }}
+            aria-hidden="true"
+          />
+
+          {/* L4: Subsurface scattering glow */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              borderRadius: br,
+              background: sssGlow,
+              zIndex: 3,
+              mixBlendMode: isDark ? "screen" : "normal",
+            }}
+            aria-hidden="true"
+          />
+
+          {/* L5: Caustic light concentrations */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              borderRadius: br,
+              background: caustics,
+              zIndex: 4,
+              opacity: hover ? 1 : 0.6,
+              transition: "opacity 0.4s ease",
+              mixBlendMode: "screen",
+            }}
+            aria-hidden="true"
+          />
+
+          {/* L6: Specular highlight blob */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              borderRadius: br,
+              background: specular,
+              zIndex: 5,
+              transition: "opacity 0.3s ease",
+            }}
+            aria-hidden="true"
+          />
+
+          {/* L7: Top surface sheen */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ borderRadius: br, background: topSheen, zIndex: 6 }}
+            aria-hidden="true"
+          />
+
+          {/* L8: Internal refraction pattern */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              borderRadius: br,
+              background: refractionPattern,
+              zIndex: 3,
+              opacity: 0.7,
+              animation: "jelly-refraction-drift 12s ease-in-out infinite alternate",
+            }}
+            aria-hidden="true"
+          />
+
+          {/* Content — text embedded IN the gel */}
+          <div
+            className="relative z-10"
+            style={{
+              textShadow: isDark
+                ? "0 1px 3px rgba(0,0,0,0.6), 0 0 10px rgba(0,0,0,0.3)"
+                : "0 1px 2px rgba(255,255,255,0.9), 0 0 6px rgba(255,255,255,0.5), 0 -1px 1px rgba(0,0,0,0.04)",
+            }}
+          >
+            {children}
+          </div>
         </div>
+
+        {/* ═══ BOTTOM FACE ═══ */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            borderRadius: br,
+            background: isDark
+              ? `hsla(${hue}, 45%, 14%, 0.7)`
+              : `hsla(${hue}, 30%, 72%, 0.3)`,
+            transform: `translateZ(0px) rotateX(180deg)`,
+            backfaceVisibility: "hidden",
+          }}
+          aria-hidden="true"
+        />
+
+        {/* ═══ SIDE FACES — Visible 3D depth edges ═══ */}
+
+        {/* Bottom edge — MOST visible */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            left: 0, right: 0, bottom: 0,
+            height: `${depth}px`,
+            background: bottomSideGrad,
+            borderRadius: "0 0 6px 6px",
+            transform: `rotateX(-90deg)`,
+            transformOrigin: "bottom center",
+            backfaceVisibility: "hidden",
+            boxShadow: isDark
+              ? `inset 0 -2px 10px hsla(${hue}, 50%, 42%, 0.3), inset 0 2px 5px rgba(255,255,255,0.08)`
+              : `inset 0 -2px 10px hsla(${hue}, 40%, 65%, 0.2), inset 0 2px 5px rgba(255,255,255,0.3)`,
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Top edge */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            left: 0, right: 0, top: 0,
+            height: `${depth}px`,
+            background: isDark
+              ? `linear-gradient(180deg,
+                  hsla(${hue}, 55%, 55%, 0.35) 0%,
+                  hsla(${hue}, 50%, 35%, 0.5) 100%)`
+              : `linear-gradient(180deg,
+                  hsla(${hue}, 42%, 92%, 0.45) 0%,
+                  hsla(${hue}, 38%, 82%, 0.35) 100%)`,
+            borderRadius: "6px 6px 0 0",
+            transform: `rotateX(90deg)`,
+            transformOrigin: "top center",
+            backfaceVisibility: "hidden",
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Left edge */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            left: 0, top: 0, bottom: 0,
+            width: `${depth}px`,
+            background: isDark
+              ? `linear-gradient(180deg,
+                  hsla(${hue}, 50%, 44%, 0.35) 0%,
+                  hsla(${hue}, 45%, 26%, 0.5) 100%)`
+              : `linear-gradient(180deg,
+                  hsla(${hue}, 38%, 88%, 0.4) 0%,
+                  hsla(${hue}, 34%, 78%, 0.3) 100%)`,
+            borderRadius: "6px 0 0 6px",
+            transform: `rotateY(90deg)`,
+            transformOrigin: "left center",
+            backfaceVisibility: "hidden",
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Right edge — SECOND most visible */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            right: 0, top: 0, bottom: 0,
+            width: `${depth}px`,
+            background: rightSideGrad,
+            borderRadius: "0 6px 6px 0",
+            transform: `rotateY(-90deg)`,
+            transformOrigin: "right center",
+            backfaceVisibility: "hidden",
+            boxShadow: isDark
+              ? `inset -2px 0 10px hsla(${hue}, 45%, 38%, 0.25), inset 2px 0 5px rgba(255,255,255,0.06)`
+              : `inset -2px 0 10px hsla(${hue}, 38%, 62%, 0.18), inset 2px 0 5px rgba(255,255,255,0.25)`,
+          }}
+          aria-hidden="true"
+        />
       </div>
 
-      {/* ═══ BOTTOM THICKNESS STRIP ═══ */}
+      {/* ═══ FALLBACK THICKNESS STRIP — Bottom ═══ */}
       <div
-        className="absolute left-1 right-0 pointer-events-none"
+        className="absolute left-0 right-0 pointer-events-none"
         style={{
-          bottom: `-${DEPTH}px`,
-          height: `${DEPTH}px`,
-          borderRadius: `0 0 ${br} ${br}`,
-          background: bottomStripBg,
-          filter: "blur(0.5px)",
-          zIndex: -1,
-        }}
-        aria-hidden="true"
-      />
-
-      {/* ═══ RIGHT THICKNESS STRIP ═══ */}
-      <div
-        className="absolute top-1 bottom-0 pointer-events-none"
-        style={{
-          right: `-${DEPTH * 0.7}px`,
-          width: `${DEPTH * 0.7}px`,
-          borderRadius: `0 ${br} ${br} 0`,
-          background: rightStripBg,
-          filter: "blur(0.5px)",
-          zIndex: -1,
-        }}
-        aria-hidden="true"
-      />
-
-      {/* ═══ CORNER SHADOW (depth illusion) ═══ */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          bottom: `-${DEPTH + 2}px`,
-          right: `-${DEPTH * 0.5}px`,
-          width: `${DEPTH * 1.5}px`,
-          height: `${DEPTH * 1.5}px`,
-          borderRadius: "50%",
+          bottom: `-${depth * 0.65}px`,
+          height: `${depth * 0.75}px`,
+          borderRadius: "0 0 1.35rem 1.05rem",
           background: isDark
-            ? `radial-gradient(circle, hsla(${hue}, 40%, 10%, 0.25) 0%, transparent 70%)`
-            : `radial-gradient(circle, hsla(${hue}, 25%, 50%, 0.1) 0%, transparent 70%)`,
-          filter: "blur(4px)",
-          zIndex: -2,
+            ? `linear-gradient(180deg,
+                hsla(${hue}, 45%, 30%, 0.4) 0%,
+                hsla(${hue}, 40%, 20%, 0.2) 50%,
+                transparent 100%)`
+            : `linear-gradient(180deg,
+                hsla(${hue}, 35%, 75%, 0.3) 0%,
+                hsla(${hue}, 30%, 82%, 0.15) 50%,
+                transparent 100%)`,
+          filter: "blur(2px)",
+          zIndex: -1,
         }}
         aria-hidden="true"
       />
 
+      {/* ═══ FALLBACK RIGHT EDGE STRIP ═══ */}
+      <div
+        className="absolute top-0 bottom-0 pointer-events-none"
+        style={{
+          right: `-${depth * 0.35}px`,
+          width: `${depth * 0.45}px`,
+          borderRadius: "0 1.1rem 1.35rem 0",
+          background: isDark
+            ? `linear-gradient(90deg,
+                hsla(${hue}, 42%, 26%, 0.3) 0%,
+                hsla(${hue}, 38%, 18%, 0.15) 50%,
+                transparent 100%)`
+            : `linear-gradient(90deg,
+                hsla(${hue}, 32%, 72%, 0.22) 0%,
+                hsla(${hue}, 28%, 80%, 0.1) 50%,
+                transparent 100%)`,
+          filter: "blur(2px)",
+          zIndex: -1,
+        }}
+        aria-hidden="true"
+      />
+
+      {/* CSS Keyframes for internal refraction drift */}
       <style>{`
         @keyframes jelly-refraction-drift {
           0% { transform: translate(0, 0) scale(1); }

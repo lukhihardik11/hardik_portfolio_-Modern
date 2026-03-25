@@ -88,6 +88,7 @@ export function HeroSection() {
   const pillsRef = useRef<HTMLDivElement>(null);
   const splineWrapRef = useRef<HTMLDivElement>(null);
   const scrollIndicatorRef = useRef<HTMLDivElement>(null);
+  const statusPillRef = useRef<HTMLDivElement>(null);
 
   // Parallax layers
   const bgLayer1 = useRef<HTMLDivElement>(null);
@@ -97,76 +98,48 @@ export function HeroSection() {
   // Store SplitText instance so we can revert before React reconciles
   const nameSplitRef = useRef<SplitText | null>(null);
 
+  // ═══════════════════════════════════════════════════════════════
+  // ENTRANCE ANIMATIONS — CSS-based for content, GSAP only for SplitText.
+  // CSS animations are declarative and survive React re-renders.
+  // ═══════════════════════════════════════════════════════════════
   useEffect(() => {
-    if (reducedMotion) {
-      // Make everything visible immediately
-      [nameRef, subtitleRef, taglineRef, bioRef, ctaRef, pillsRef].forEach(ref => {
-        if (ref.current) {
-          ref.current.style.opacity = "1";
-          ref.current.style.transform = "none";
-        }
-      });
-      return;
-    }
-
+    if (reducedMotion) return;
     let cancelled = false;
 
-    const ctx = gsap.context(() => {
-      // ═══════════════════════════════════════
-      // 1. SplitText character reveal on name
-      // ═══════════════════════════════════════
-      if (nameRef.current) {
-        document.fonts.ready.then(() => {
-          if (cancelled || !nameRef.current) return;
-          const split = SplitText.create(nameRef.current, {
-            type: "chars",
-            autoSplit: true,
-            onSplit(self) {
-              gsap.from(self.chars, {
-                yPercent: 120,
-                opacity: 0,
-                rotateX: -60,
-                stagger: 0.03,
-                duration: 1.2,
-                ease: "expo.out",
-                delay: 0.15,
-              });
-            },
-          });
-          nameSplitRef.current = split;
+    // SplitText character reveal on name (only GSAP animation we keep)
+    if (nameRef.current) {
+      document.fonts.ready.then(() => {
+        if (cancelled || !nameRef.current) return;
+        const split = SplitText.create(nameRef.current, {
+          type: "chars",
+          autoSplit: true,
+          onSplit(self) {
+            gsap.from(self.chars, {
+              yPercent: 120,
+              opacity: 0,
+              rotateX: -60,
+              stagger: 0.03,
+              duration: 1.2,
+              ease: "expo.out",
+              delay: 0.15,
+            });
+          },
         });
-      }
-
-      // ═══════════════════════════════════════
-      // 2. Staggered content reveals
-      // ═══════════════════════════════════════
-      const contentElements = [
-        { el: subtitleRef.current, delay: 0.5 },
-        { el: taglineRef.current, delay: 0.65 },
-        { el: bioRef.current, delay: 0.8 },
-        { el: ctaRef.current, delay: 0.95 },
-        { el: pillsRef.current, delay: 1.1 },
-      ];
-
-      contentElements.forEach(({ el, delay }) => {
-        if (!el) return;
-        gsap.fromTo(el,
-          { opacity: 0, y: 30 },
-          { opacity: 1, y: 0, duration: 1, delay, ease: "expo.out" }
-        );
+        nameSplitRef.current = split;
       });
+    }
 
-      // Spline visual fade-in with scale
-      if (splineWrapRef.current) {
-        gsap.fromTo(splineWrapRef.current,
-          { opacity: 0, scale: 0.92 },
-          { opacity: 1, scale: 1, duration: 1.4, delay: 0.4, ease: "expo.out" }
-        );
-      }
+    return () => { cancelled = true; };
+  }, [reducedMotion]);
 
-      // ═══════════════════════════════════════
-      // 3. Parallax depth layers (desktop only)
-      // ═══════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════
+  // SCROLL-DRIVEN ANIMATIONS — depends on isDesktop for parallax.
+  // Separated so ctx.revert() only kills scroll animations, not entrance.
+  // ═══════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (reducedMotion) return;
+
+    const ctx = gsap.context(() => {
       if (isDesktop) {
         [
           { ref: bgLayer1.current, yEnd: -120 },
@@ -216,15 +189,19 @@ export function HeroSection() {
     }, sectionRef);
 
     return () => {
-      cancelled = true;
-      // Revert SplitText BEFORE gsap.context revert to restore original DOM
+      ctx.revert();
+    };
+  }, [isDesktop, reducedMotion]);
+
+  // Cleanup SplitText on unmount
+  useEffect(() => {
+    return () => {
       if (nameSplitRef.current) {
         nameSplitRef.current.revert();
         nameSplitRef.current = null;
       }
-      ctx.revert();
     };
-  }, [isDesktop, reducedMotion]);
+  }, []);
 
   const onSplineLoad = useCallback(
     (splineApp: any) => {
@@ -239,7 +216,7 @@ export function HeroSection() {
           if (typeof r.setClearColor === "function") r.setClearColor(0x000000, 0);
           if (typeof r.setClearAlpha === "function") r.setClearAlpha(0);
         }
-        document.querySelectorAll("#hero canvas").forEach((c) => {
+        sectionRef.current?.querySelectorAll("canvas")?.forEach((c) => {
           (c as HTMLCanvasElement).style.background = "transparent";
         });
         if (splineApp?._renderer?.pipeline?.logoOverlayPass) {
@@ -326,13 +303,7 @@ export function HeroSection() {
           {/* ═══ Left column: text content ═══ */}
           <div className="xl:col-span-3 flex flex-col gap-5 sm:gap-6 md:gap-7 xl:gap-8">
             {/* Status pill */}
-            <div style={{ opacity: 0 }} ref={el => {
-              if (el && !reducedMotion) {
-                gsap.to(el, { opacity: 1, delay: 0.1, duration: 0.6 });
-              } else if (el) {
-                el.style.opacity = "1";
-              }
-            }}>
+            <div ref={statusPillRef} className="hero-reveal" style={{ animationDelay: '0.1s' }}>
               <span className={`inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-muted-foreground ${
                 jellyMode
                   ? "glass-pill"
@@ -369,8 +340,8 @@ export function HeroSection() {
             {/* Role */}
             <p
               ref={subtitleRef}
-              className="text-lg sm:text-xl font-semibold text-foreground/85 leading-relaxed tracking-[-0.01em]"
-              style={{ opacity: 0 }}
+              className="text-lg sm:text-xl font-semibold text-foreground/85 leading-relaxed tracking-[-0.01em] hero-reveal"
+              style={{ animationDelay: '0.5s' }}
             >
               Project Manager | Senior Mechanical Engineer
             </p>
@@ -378,8 +349,8 @@ export function HeroSection() {
             {/* Tagline */}
             <p
               ref={taglineRef}
-              className="text-[11px] sm:text-xs font-medium text-primary/70 tracking-[0.15em] font-mono uppercase"
-              style={{ opacity: 0 }}
+              className="text-[11px] sm:text-xs font-medium text-primary/70 tracking-[0.15em] font-mono uppercase hero-reveal"
+              style={{ animationDelay: '0.65s' }}
             >
               Hardware Sustainment &amp; Test Engineering
             </p>
@@ -387,8 +358,8 @@ export function HeroSection() {
             {/* Bio */}
             <p
               ref={bioRef}
-              className="text-sm sm:text-[0.9rem] text-muted-foreground leading-[1.7] max-w-xl"
-              style={{ opacity: 0 }}
+              className="text-sm sm:text-[0.9rem] text-muted-foreground leading-[1.7] max-w-xl hero-reveal"
+              style={{ animationDelay: '0.8s' }}
             >
               Hardware Engineer and Project Manager who owns Meta's end-to-end EMG wearable
               sustainment pipeline — from failure investigation and CT scanning through fixture
@@ -399,7 +370,7 @@ export function HeroSection() {
             </p>
 
             {/* CTAs with Magnetic hover + jelly button classes */}
-            <div ref={ctaRef} className="flex flex-wrap items-center gap-3 pt-1" style={{ opacity: 0 }}>
+            <div ref={ctaRef} className="flex flex-wrap items-center gap-3 pt-1 hero-reveal" style={{ animationDelay: '0.95s' }}>
               <Magnetic strength={0.25}>
                 <a
                   href="#contact"
@@ -453,7 +424,7 @@ export function HeroSection() {
             </div>
 
             {/* Company pills with jelly classes */}
-            <div ref={pillsRef} className="flex items-center gap-2 sm:gap-3 pt-2 flex-wrap" style={{ opacity: 0 }}>
+            <div ref={pillsRef} className="flex items-center gap-2 sm:gap-3 pt-2 flex-wrap hero-reveal" style={{ animationDelay: '1.1s' }}>
               {companies.map((c) => (
                 <span
                   key={c.name}
@@ -476,8 +447,8 @@ export function HeroSection() {
           {/* ═══ Right column: Spline 3D or HeroCrossSection ═══ */}
           <div
             ref={splineWrapRef}
-            className="xl:col-span-2 relative h-[340px] md:h-[400px] xl:h-[540px] hidden md:flex items-center justify-center"
-            style={{ opacity: 0 }}
+            className="xl:col-span-2 relative h-[340px] md:h-[400px] xl:h-[540px] hidden md:flex items-center justify-center hero-reveal-scale"
+            style={{ animationDelay: '0.4s' }}
           >
             {/* Ambient glow */}
             <div
@@ -532,6 +503,41 @@ export function HeroSection() {
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.6; }
+        }
+        @keyframes heroRevealUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes heroRevealScale {
+          from {
+            opacity: 0;
+            transform: scale(0.92);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        .hero-reveal {
+          opacity: 0;
+          animation: heroRevealUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .hero-reveal-scale {
+          opacity: 0;
+          animation: heroRevealScale 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .hero-reveal, .hero-reveal-scale {
+            opacity: 1;
+            animation: none;
+            transform: none;
+          }
         }
       `}</style>
     </section>

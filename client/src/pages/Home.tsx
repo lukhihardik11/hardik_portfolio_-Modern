@@ -27,9 +27,9 @@ export default function Home() {
       <div className="h-16" />
 
       {/* Hero — no padding, self-contained */}
-      <section id="hero" className="scroll-mt-20">
+      <div className="scroll-mt-20">
         <HeroSection />
-      </section>
+      </div>
 
       {/* About — generous top breathing room, tighter bottom */}
       <section

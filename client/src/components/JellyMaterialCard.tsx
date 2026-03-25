@@ -21,7 +21,13 @@ import { useTheme } from "@/contexts/ThemeContext";
 interface SpringState { value: number; velocity: number; }
 interface SpringConfig { stiffness: number; damping: number; mass: number; }
 
-const JELLY_SPRING: SpringConfig = { stiffness: 85, damping: 3.8, mass: 0.45 };
+// Reference-matched spring configs (from TypeGPU jelly switch)
+// squashX/Z = shape deformation, wiggle = rotational wobble
+const SQUASH_X_SPRING: SpringConfig = { stiffness: 1000, damping: 10, mass: 1 };
+const SQUASH_Z_SPRING: SpringConfig = { stiffness: 900, damping: 12, mass: 1 };
+const WIGGLE_SPRING: SpringConfig = { stiffness: 1000, damping: 20, mass: 1 };
+// Softer spring for tilt (not in reference, but needed for pointer-follow)
+const TILT_SPRING: SpringConfig = { stiffness: 400, damping: 18, mass: 1 };
 
 function stepSpring(s: SpringState, target: number, c: SpringConfig, dt: number): SpringState {
   const disp = s.value - target;
@@ -47,8 +53,8 @@ interface JellyMaterialCardProps {
 }
 
 const JELLY_DEPTH = 48;
-const REST_TILT_X = 6;
-const REST_TILT_Y = -3;
+const REST_TILT_X = 3;
+const REST_TILT_Y = -1.5;
 const ORGANIC_BR = "1.5rem 1.1rem 1.35rem 1.05rem";
 
 function JellyMaterialCardInner({
@@ -69,16 +75,20 @@ function JellyMaterialCardInner({
   const cubeRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
 
+  // Decomposed into 3 reference channels + tilt channels
   const springRef = useRef({
-    scaleX: { value: 1, velocity: 0 } as SpringState,
-    scaleY: { value: 1, velocity: 0 } as SpringState,
+    // Reference channels — squash deformation
+    squashX: { value: 0, velocity: 0 } as SpringState,  // horizontal squash (maps to scaleX offset)
+    squashZ: { value: 0, velocity: 0 } as SpringState,  // depth squash (maps to scaleY offset)
+    wiggleX: { value: 0, velocity: 0 } as SpringState,  // rotational wiggle (maps to rotZ)
+    // Tilt channels — pointer-follow
     rotX: { value: REST_TILT_X, velocity: 0 } as SpringState,
     rotY: { value: REST_TILT_Y, velocity: 0 } as SpringState,
-    rotZ: { value: 0, velocity: 0 } as SpringState,
     translateZ: { value: 0, velocity: 0 } as SpringState,
   });
   const targetRef = useRef({
-    scaleX: 1, scaleY: 1, rotX: REST_TILT_X, rotY: REST_TILT_Y, rotZ: 0, translateZ: 0,
+    squashX: 0, squashZ: 0, wiggleX: 0,
+    rotX: REST_TILT_X, rotY: REST_TILT_Y, translateZ: 0,
   });
   const lastTimeRef = useRef(0);
   const isAnimatingRef = useRef(false);
@@ -100,33 +110,41 @@ function JellyMaterialCardInner({
 
     const s = springRef.current;
     const t = targetRef.current;
-    s.scaleX = stepSpring(s.scaleX, t.scaleX, JELLY_SPRING, dt);
-    s.scaleY = stepSpring(s.scaleY, t.scaleY, JELLY_SPRING, dt);
-    s.rotX = stepSpring(s.rotX, t.rotX, JELLY_SPRING, dt);
-    s.rotY = stepSpring(s.rotY, t.rotY, JELLY_SPRING, dt);
-    s.rotZ = stepSpring(s.rotZ, t.rotZ, JELLY_SPRING, dt);
-    s.translateZ = stepSpring(s.translateZ, t.translateZ, JELLY_SPRING, dt);
+    // Reference-matched spring stepping
+    s.squashX = stepSpring(s.squashX, t.squashX, SQUASH_X_SPRING, dt);
+    s.squashZ = stepSpring(s.squashZ, t.squashZ, SQUASH_Z_SPRING, dt);
+    s.wiggleX = stepSpring(s.wiggleX, t.wiggleX, WIGGLE_SPRING, dt);
+    // Tilt springs (softer, for pointer-follow)
+    s.rotX = stepSpring(s.rotX, t.rotX, TILT_SPRING, dt);
+    s.rotY = stepSpring(s.rotY, t.rotY, TILT_SPRING, dt);
+    s.translateZ = stepSpring(s.translateZ, t.translateZ, TILT_SPRING, dt);
+
+    // Map reference channels to CSS transforms
+    // squashX → scaleX offset, squashZ → scaleY offset (orthogonal compression)
+    const scaleX = 1 + s.squashX.value * 0.15;
+    const scaleY = 1 + s.squashZ.value * 0.15;
+    const wiggleDeg = s.wiggleX.value * 3; // wiggle → rotateZ degrees
 
     cubeRef.current.style.transform =
-      `rotateX(${s.rotX.value.toFixed(3)}deg) rotateY(${s.rotY.value.toFixed(3)}deg) rotateZ(${s.rotZ.value.toFixed(3)}deg) scale3d(${s.scaleX.value.toFixed(4)}, ${s.scaleY.value.toFixed(4)}, 1) translateZ(${s.translateZ.value.toFixed(2)}px)`;
+      `rotateX(${s.rotX.value.toFixed(3)}deg) rotateY(${s.rotY.value.toFixed(3)}deg) rotateZ(${wiggleDeg.toFixed(3)}deg) scale3d(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)}, 1) translateZ(${s.translateZ.value.toFixed(2)}px)`;
 
     const settled =
-      Math.abs(s.scaleX.velocity) < 0.0003 && Math.abs(s.scaleX.value - t.scaleX) < 0.0003 &&
-      Math.abs(s.scaleY.velocity) < 0.0003 && Math.abs(s.scaleY.value - t.scaleY) < 0.0003 &&
+      Math.abs(s.squashX.velocity) < 0.001 && Math.abs(s.squashX.value - t.squashX) < 0.001 &&
+      Math.abs(s.squashZ.velocity) < 0.001 && Math.abs(s.squashZ.value - t.squashZ) < 0.001 &&
+      Math.abs(s.wiggleX.velocity) < 0.001 && Math.abs(s.wiggleX.value - t.wiggleX) < 0.001 &&
       Math.abs(s.rotX.velocity) < 0.003 && Math.abs(s.rotX.value - t.rotX) < 0.003 &&
       Math.abs(s.rotY.velocity) < 0.003 && Math.abs(s.rotY.value - t.rotY) < 0.003 &&
-      Math.abs(s.rotZ.velocity) < 0.003 && Math.abs(s.rotZ.value - t.rotZ) < 0.003 &&
       Math.abs(s.translateZ.velocity) < 0.003 && Math.abs(s.translateZ.value - t.translateZ) < 0.003;
 
     if (settled) {
-      s.scaleX = { value: t.scaleX, velocity: 0 };
-      s.scaleY = { value: t.scaleY, velocity: 0 };
+      s.squashX = { value: t.squashX, velocity: 0 };
+      s.squashZ = { value: t.squashZ, velocity: 0 };
+      s.wiggleX = { value: t.wiggleX, velocity: 0 };
       s.rotX = { value: t.rotX, velocity: 0 };
       s.rotY = { value: t.rotY, velocity: 0 };
-      s.rotZ = { value: t.rotZ, velocity: 0 };
       s.translateZ = { value: t.translateZ, velocity: 0 };
       cubeRef.current.style.transform =
-        `rotateX(${t.rotX}deg) rotateY(${t.rotY}deg) rotateZ(${t.rotZ}deg) scale3d(${t.scaleX}, ${t.scaleY}, 1) translateZ(${t.translateZ}px)`;
+        `rotateX(${t.rotX}deg) rotateY(${t.rotY}deg) rotateZ(0deg) scale3d(1, 1, 1) translateZ(${t.translateZ}px)`;
       isAnimatingRef.current = false;
       return;
     }
@@ -143,12 +161,14 @@ function JellyMaterialCardInner({
   const triggerWobble = useCallback((mult = 1) => {
     if (prefersReducedMotion) return;
     const s = springRef.current;
-    s.scaleX.velocity += (8 + Math.random() * 5) * mult;
-    s.scaleY.velocity += (-7 - Math.random() * 4) * mult;
-    s.rotX.velocity += (20 + Math.random() * 14) * mult;
-    s.rotY.velocity += (-16 - Math.random() * 10) * mult;
-    s.rotZ.velocity += (4 + Math.random() * 5) * mult * (Math.random() > 0.5 ? 1 : -1);
-    s.translateZ.velocity += (32 + Math.random() * 22) * mult;
+    // Reference-matched overshoot impulse pattern:
+    // squashX.velocity = -5, squashZ.velocity = 5, wiggleX.velocity = ±10
+    s.squashX.velocity += -5 * mult;
+    s.squashZ.velocity += 5 * mult;
+    s.wiggleX.velocity += (Math.random() > 0.5 ? 10 : -10) * mult;
+    // Also nudge tilt for visual interest
+    s.rotX.velocity += (8 + Math.random() * 6) * mult;
+    s.translateZ.velocity += 15 * mult;
     startAnimation();
   }, [prefersReducedMotion, startAnimation]);
 
@@ -159,12 +179,12 @@ function JellyMaterialCardInner({
     const interval = setInterval(() => {
       phase += 1;
       const s = springRef.current;
-      s.scaleX.velocity += Math.sin(phase * 0.6) * 0.6;
-      s.scaleY.velocity += Math.cos(phase * 0.9) * 0.5;
-      s.rotX.velocity += Math.sin(phase * 0.4) * 1.0;
-      s.rotY.velocity += Math.cos(phase * 0.7) * 0.8;
-      s.rotZ.velocity += Math.sin(phase * 1.1) * 0.4;
-      s.translateZ.velocity += Math.cos(phase * 0.5) * 0.7;
+      // Gentle idle nudges using reference channels
+      s.squashX.velocity += Math.sin(phase * 0.6) * 0.4;
+      s.squashZ.velocity += Math.cos(phase * 0.9) * 0.3;
+      s.wiggleX.velocity += Math.sin(phase * 1.1) * 0.5;
+      s.rotX.velocity += Math.sin(phase * 0.4) * 0.6;
+      s.rotY.velocity += Math.cos(phase * 0.7) * 0.5;
       startAnimation();
     }, 2000);
     return () => clearInterval(interval);
@@ -206,21 +226,19 @@ function JellyMaterialCardInner({
     setPointerPos({ x, y });
     targetRef.current.rotX = REST_TILT_X + (0.5 - y) * 12 * intensity;
     targetRef.current.rotY = REST_TILT_Y + (x - 0.5) * 15 * intensity;
-    targetRef.current.rotZ = (x - 0.5) * (y - 0.5) * 4 * intensity;
     startAnimation();
   }, [prefersReducedMotion, jellyMode, intensity, startAnimation]);
 
   const handlePointerEnter = useCallback(() => {
     setHover(true);
     if (jellyMode && !prefersReducedMotion) {
-      targetRef.current.scaleX = 1.02;
-      targetRef.current.scaleY = 1.02;
       targetRef.current.translateZ = 12;
       const s = springRef.current;
-      s.scaleX.velocity += 3.5;
-      s.scaleY.velocity -= 3;
-      s.rotX.velocity += 6;
-      s.rotZ.velocity += 1.5;
+      // Reference: anticipation squash on hover
+      s.squashX.velocity += -2;
+      s.squashZ.velocity += 1;
+      s.wiggleX.velocity += 1;
+      s.rotX.velocity += 4;
       startAnimation();
     }
   }, [jellyMode, prefersReducedMotion, startAnimation]);
@@ -229,40 +247,38 @@ function JellyMaterialCardInner({
     setHover(false);
     setPointerPos({ x: 0.5, y: 0.5 });
     if (jellyMode) {
-      targetRef.current.scaleX = 1;
-      targetRef.current.scaleY = 1;
       targetRef.current.rotX = REST_TILT_X;
       targetRef.current.rotY = REST_TILT_Y;
-      targetRef.current.rotZ = 0;
       targetRef.current.translateZ = 0;
       const s = springRef.current;
-      s.scaleX.velocity += -2.5;
-      s.scaleY.velocity += 2.5;
-      s.rotX.velocity += -5;
-      s.rotZ.velocity += -1;
+      // Reference: release impulse
+      s.squashX.velocity += 2;
+      s.squashZ.velocity += -1.5;
+      s.wiggleX.velocity += -2;
       startAnimation();
     }
   }, [jellyMode, startAnimation]);
 
   const handlePointerDown = useCallback(() => {
     if (!jellyMode || prefersReducedMotion) return;
-    targetRef.current.scaleX = 1.07;
-    targetRef.current.scaleY = 0.93;
-    targetRef.current.translateZ = -10;
+    // Reference: pressed anticipation — squashX.velocity = -2, squashZ.velocity = 1
+    const s = springRef.current;
+    s.squashX.velocity = -2;
+    s.squashZ.velocity = 1;
+    s.wiggleX.velocity = 1;
+    targetRef.current.translateZ = -8;
     startAnimation();
   }, [jellyMode, prefersReducedMotion, startAnimation]);
 
   const handlePointerUp = useCallback(() => {
     if (!jellyMode || prefersReducedMotion) return;
-    targetRef.current.scaleX = hover ? 1.02 : 1;
-    targetRef.current.scaleY = hover ? 1.02 : 1;
     targetRef.current.translateZ = hover ? 12 : 0;
+    // Reference: overshoot impulse on release
     const s = springRef.current;
-    s.scaleX.velocity += -8;
-    s.scaleY.velocity += 9;
-    s.rotX.velocity += 14;
-    s.rotZ.velocity += 3;
-    s.translateZ.velocity += 25;
+    s.squashX.velocity = -5;
+    s.squashZ.velocity = 5;
+    s.wiggleX.velocity = (Math.random() > 0.5 ? -10 : 10);
+    s.translateZ.velocity += 15;
     startAnimation();
   }, [jellyMode, prefersReducedMotion, hover, startAnimation]);
 
@@ -486,8 +502,8 @@ function JellyMaterialCardInner({
       ref={containerRef}
       className={`relative group cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary/70 ${className}`}
       style={{
-        perspective: "650px",
-        perspectiveOrigin: "38% 25%",
+        perspective: "900px",
+        perspectiveOrigin: "40% 30%",
         marginBottom: `${depth * 0.9}px`,
         ...style,
       }}

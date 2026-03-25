@@ -1,8 +1,6 @@
 /**
  * ExperienceSection — Premium timeline with GSAP-powered animations.
- * 
- * Anti-AI-made: Instrument Serif italic heading, expo.out easing,
- * varied card border-radius, authored spacing.
+ * Uses JellyMaterialCard for GPU-rendered jelly material on all cards.
  */
 import { useRef, useEffect } from "react";
 import { MapPin, Briefcase } from "lucide-react";
@@ -10,6 +8,7 @@ import { TextReveal } from "@/components/animation/TextReveal";
 import { ScrollReveal } from "@/components/animation/ScrollReveal";
 import { useAnimation } from "@/components/animation/AnimationProvider";
 import { useJellyMode } from "@/contexts/JellyModeContext";
+import { JellyMaterialCard } from "@/components/JellyMaterialCard";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
@@ -23,6 +22,7 @@ const experiences = [
     location: "Redmond, WA",
     period: "Oct 2024 — Present",
     current: true,
+    hue: 200,
     highlights: [
       "Leading end-to-end project delivery for EMG wearable sustainment program across prototyping, test development, failure analysis, and CM transfer",
       "Managing cross-functional teams spanning mechanical, electrical, firmware, and quality engineering",
@@ -35,6 +35,7 @@ const experiences = [
     location: "Redmond, WA",
     period: "Jun 2022 — Oct 2024",
     current: false,
+    hue: 210,
     highlights: [
       "Owned failure analysis pipeline for 400+ EMG wearable devices using CT scanning, cross-sectioning, and root cause investigation",
       "Designed 20+ custom test fixtures including bed-of-nails, flatbed modular, and cylindrical verification stations",
@@ -47,6 +48,7 @@ const experiences = [
     location: "San Jose, CA",
     period: "Jul 2021 — Jun 2022",
     current: false,
+    hue: 160,
     highlights: [
       "Led quality engineering for wearable communication devices in healthcare environments",
       "Implemented CAPA processes and drove FMEA/risk management activities under ISO 13485",
@@ -59,6 +61,7 @@ const experiences = [
     location: "Plano, TX",
     period: "Feb 2020 — Jul 2021",
     current: false,
+    hue: 280,
     highlights: [
       "Supported quality systems for cardiac rhythm management devices under FDA QMS and EU MDR",
       "Conducted process validation (IQ/OQ/PQ) and statistical analysis using Minitab and SPC tools",
@@ -71,6 +74,7 @@ const experiences = [
     location: "Lakewood, CO",
     period: "Jun 2019 — Feb 2020",
     current: false,
+    hue: 65,
     highlights: [
       "Managed quality engineering activities for blood component technology manufacturing",
       "Performed process capability studies (Cpk) and first article inspections (FAI)",
@@ -133,10 +137,16 @@ export function ExperienceSection() {
   }, [reducedMotion, isDesktop]);
 
   const lineHeight = experiences.length * 160;
+  const cardRadii = [
+    "1.25rem 1rem 1rem 0.5rem",
+    "1rem 1.25rem 0.75rem 1rem",
+    "0.75rem",
+    "0.75rem 1rem 1rem 0.75rem",
+    "0.5rem 1rem 1.25rem 1rem",
+  ];
 
   return (
     <div className="jelly-section-bg relative">
-      {/* Section header — authored asymmetry */}
       <div className="mb-14 lg:mb-20">
         <ScrollReveal mode="up" distance={30} duration={0.7}>
           <p className={`text-[11px] font-mono uppercase tracking-[0.2em] mb-5 ${
@@ -155,7 +165,6 @@ export function ExperienceSection() {
         </TextReveal>
       </div>
 
-      {/* Timeline */}
       <div ref={timelineRef} className="relative">
         <svg
           className="absolute left-[14px] top-0 bottom-0 w-[2px] hidden sm:block"
@@ -177,72 +186,56 @@ export function ExperienceSection() {
         <div className="flex flex-col gap-4 sm:gap-5">
           {experiences.map((exp, i) => (
             <div key={i} className="relative sm:pl-12">
-              {/* Timeline dot */}
               <div
                 data-dot
                 className={`absolute left-0 top-7 rounded-full hidden sm:flex items-center justify-center w-[30px] h-[30px] ${
                   jellyMode
-                    ? exp.current
-                      ? "jelly-dot jelly-dot-teal"
-                      : "jelly-dot jelly-dot-amber"
-                    : exp.current
-                      ? "bg-primary/10 border-2 border-primary"
-                      : "bg-background border-2 border-border"
+                    ? exp.current ? "jelly-dot jelly-dot-teal" : "jelly-dot jelly-dot-amber"
+                    : exp.current ? "bg-primary/10 border-2 border-primary" : "bg-background border-2 border-border"
                 }`}
-                style={
-                  !jellyMode && exp.current
-                    ? { boxShadow: "0 0 12px oklch(from var(--primary) l c h / 25%)" }
-                    : undefined
-                }
+                style={!jellyMode && exp.current ? { boxShadow: "0 0 12px oklch(from var(--primary) l c h / 25%)" } : undefined}
               >
                 <div
-                  className={`rounded-full ${
-                    exp.current ? "w-2.5 h-2.5 bg-primary" : "w-2 h-2 bg-muted-foreground/30"
-                  }`}
+                  className={`rounded-full ${exp.current ? "w-2.5 h-2.5 bg-primary" : "w-2 h-2 bg-muted-foreground/30"}`}
                   style={jellyMode ? { background: exp.current ? "oklch(1 0 0 / 80%)" : "oklch(1 0 0 / 40%)" } : undefined}
                 />
               </div>
 
-              {/* Card — varied border-radius for authored feel */}
-              <div
+              <JellyMaterialCard
                 data-exp-card
-                className={`group transition-all duration-400 ${
-                  jellyMode
-                    ? `jelly-card p-6 sm:p-7 ${exp.current ? "border-l-2" : ""}`
-                    : `bg-card/40 backdrop-blur-sm border border-border/40 p-6 sm:p-7 hover:bg-card/70 hover:border-border/60 hover:shadow-lg hover:shadow-primary/5 ${
-                        exp.current ? "border-l-2 border-l-primary" : ""
-                      }`
-                }`}
-                style={{
-                  borderRadius: i === 0 ? "1.25rem 1rem 1rem 0.5rem" : i === experiences.length - 1 ? "0.5rem 1rem 1.25rem 1rem" : "0.75rem",
-                  ...(jellyMode && exp.current ? { borderLeftColor: "var(--jelly-teal)" } : {}),
-                }}
+                hue={exp.hue}
+                intensity={exp.current ? 0.8 : 0.6}
+                borderRadius={cardRadii[i % cardRadii.length]}
+                className={`group transition-all duration-400 ${exp.current ? "border-l-2 border-l-primary" : ""}`}
+                style={jellyMode && exp.current ? { borderLeftColor: "var(--jelly-teal)" } : undefined}
               >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground tracking-[-0.01em]">{exp.role}</h3>
-                    <p className="text-xs text-primary font-medium mt-1 flex items-center gap-1.5">
-                      <Briefcase size={11} />
-                      {exp.company}
-                    </p>
+                <div className="p-6 sm:p-7">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground tracking-[-0.01em]">{exp.role}</h3>
+                      <p className="text-xs text-primary font-medium mt-1 flex items-center gap-1.5">
+                        <Briefcase size={11} />
+                        {exp.company}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground shrink-0">
+                      <span className="font-mono tracking-tight">{exp.period}</span>
+                      <span className="inline-flex items-center gap-1 text-muted-foreground/60">
+                        <MapPin size={10} />
+                        {exp.location}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground shrink-0">
-                    <span className="font-mono tracking-tight">{exp.period}</span>
-                    <span className="inline-flex items-center gap-1 text-muted-foreground/60">
-                      <MapPin size={10} />
-                      {exp.location}
-                    </span>
-                  </div>
+                  <ul className="space-y-2.5">
+                    {exp.highlights.map((h, j) => (
+                      <li key={j} className="text-[0.8rem] text-muted-foreground leading-relaxed flex gap-2.5">
+                        <span className="text-primary/30 mt-0.5 shrink-0 text-[8px]">●</span>
+                        <span>{h}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul className="space-y-2.5">
-                  {exp.highlights.map((h, j) => (
-                    <li key={j} className="text-[0.8rem] text-muted-foreground leading-relaxed flex gap-2.5">
-                      <span className="text-primary/30 mt-0.5 shrink-0 text-[8px]">●</span>
-                      <span>{h}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              </JellyMaterialCard>
             </div>
           ))}
         </div>

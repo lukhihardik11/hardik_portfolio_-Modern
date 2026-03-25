@@ -1,8 +1,9 @@
 /**
- * ProjectsSection — Premium horizontal scroll gallery with GSAP.
+ * ProjectsSection — Horizontal scroll gallery with JellyMaterialCard.
+ * GPU-rendered jelly material on all project cards.
  * 
- * Anti-AI-made: Instrument Serif italic heading, expo.out easing,
- * varied card border-radius, authored spacing.
+ * Desktop: Full-viewport pinned section with header on left, cards scrolling right.
+ * Mobile: Vertical grid with stagger reveals.
  */
 import { useRef, useEffect } from "react";
 import { ArrowUpRight } from "lucide-react";
@@ -12,6 +13,7 @@ import { ScrollReveal } from "@/components/animation/ScrollReveal";
 import { Magnetic } from "@/components/animation/Magnetic";
 import { useAnimation } from "@/components/animation/AnimationProvider";
 import { useJellyMode } from "@/contexts/JellyModeContext";
+import { JellyMaterialCard } from "@/components/JellyMaterialCard";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -26,7 +28,7 @@ const projects = [
       { label: "Devices Analyzed", value: "400+" },
       { label: "Life Extension", value: "25%" },
     ],
-    color: "oklch(0.55 0.18 230)",
+    hue: 230,
     accentColor: "#3b82f6",
   },
   {
@@ -39,7 +41,7 @@ const projects = [
       { label: "Scan Throughput", value: "3x" },
       { label: "Defect Detection", value: "98%" },
     ],
-    color: "oklch(0.60 0.16 200)",
+    hue: 200,
     accentColor: "#06b6d4",
   },
   {
@@ -52,7 +54,7 @@ const projects = [
       { label: "Fixtures Built", value: "20+" },
       { label: "Test Time Reduction", value: "60%" },
     ],
-    color: "oklch(0.65 0.14 160)",
+    hue: 160,
     accentColor: "#10b981",
   },
   {
@@ -65,7 +67,7 @@ const projects = [
       { label: "Manual Time Saved", value: "60%" },
       { label: "Test Coverage", value: "95%" },
     ],
-    color: "oklch(0.70 0.12 80)",
+    hue: 65,
     accentColor: "#f59e0b",
   },
   {
@@ -78,7 +80,7 @@ const projects = [
       { label: "Product Lines", value: "3" },
       { label: "On-time Delivery", value: "100%" },
     ],
-    color: "oklch(0.55 0.16 280)",
+    hue: 280,
     accentColor: "#8b5cf6",
   },
   {
@@ -91,7 +93,7 @@ const projects = [
       { label: "Processes Monitored", value: "50+" },
       { label: "Yield Improvement", value: "15%" },
     ],
-    color: "oklch(0.60 0.18 340)",
+    hue: 340,
     accentColor: "#ec4899",
   },
 ];
@@ -157,89 +159,111 @@ export function ProjectsSection() {
       className="no-underline"
     >
       <Magnetic strength={isHorizontal ? 0.15 : 0.08}>
-        <div
+        <JellyMaterialCard
           data-project-card
-          className={`group flex flex-col cursor-pointer transition-all duration-400 ${
+          hue={project.hue}
+          intensity={0.7}
+          borderRadius={cardRadii[i % cardRadii.length]}
+          className={`group cursor-pointer transition-all duration-400 ${
             isHorizontal ? "w-[380px] flex-shrink-0" : ""
-          } ${
-            jellyMode
-              ? "jelly-card p-7"
-              : "bg-card/40 backdrop-blur-sm border border-border/40 p-7 hover:bg-card/70 hover:border-border/60 hover:shadow-xl hover:shadow-primary/5"
           }`}
-          style={{
-            minHeight: isHorizontal ? 420 : undefined,
-            borderRadius: jellyMode ? undefined : cardRadii[i % cardRadii.length],
-          }}
+          style={{ minHeight: isHorizontal ? 420 : undefined }}
         >
-          {/* Caustic glow */}
-          {jellyMode && (
+          <div className="p-7 flex flex-col h-full">
+            {/* Accent bar */}
             <div
-              className={`jelly-caustic ${i % 2 === 0 ? "jelly-caustic-teal" : "jelly-caustic-amber"}`}
-              style={{ width: "120%", height: "60%", bottom: "-10%", left: "-10%", zIndex: 0 }}
+              className="w-10 h-1 rounded-full mb-5"
+              style={{ backgroundColor: project.accentColor }}
             />
-          )}
 
-          {/* Accent bar */}
-          <div
-            className="w-10 h-1 rounded-full mb-5 relative z-10"
-            style={{ backgroundColor: project.accentColor }}
-          />
+            {/* Category */}
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40 mb-3">
+              {project.category}
+            </span>
 
-          {/* Category */}
-          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40 mb-3 relative z-10">
-            {project.category}
-          </span>
+            {/* Title */}
+            <h3 className="text-base font-semibold text-foreground mb-3 leading-snug tracking-[-0.01em]">
+              {project.title}
+            </h3>
 
-          {/* Title */}
-          <h3 className="text-base font-semibold text-foreground mb-3 leading-snug relative z-10 tracking-[-0.01em]">
-            {project.title}
-          </h3>
+            {/* Description */}
+            <p className="text-[0.8rem] text-muted-foreground leading-[1.7] mb-5 flex-1">
+              {project.description}
+            </p>
 
-          {/* Description */}
-          <p className="text-[0.8rem] text-muted-foreground leading-[1.7] mb-5 flex-1 relative z-10">
-            {project.description}
-          </p>
+            {/* Stats */}
+            <div className="flex items-center gap-4 mb-5 py-3 border-t border-border/40">
+              {project.stats.map((stat, j) => (
+                <div key={stat.label} className={`text-center flex-1 ${j > 0 ? "border-l border-border/30 pl-4" : ""}`}>
+                  <p className="text-sm font-bold text-foreground tabular-nums">{stat.value}</p>
+                  <p className="text-[9px] text-muted-foreground/50 mt-0.5">{stat.label}</p>
+                </div>
+              ))}
+            </div>
 
-          {/* Stats */}
-          <div className="flex items-center gap-4 mb-5 py-3 border-t border-border/40 relative z-10">
-            {project.stats.map((stat, j) => (
-              <div key={stat.label} className={`text-center flex-1 ${j > 0 ? "border-l border-border/30 pl-4" : ""}`}>
-                <p className="text-sm font-bold text-foreground tabular-nums">{stat.value}</p>
-                <p className="text-[9px] text-muted-foreground/50 mt-0.5">{stat.label}</p>
-              </div>
-            ))}
+            {/* Tags */}
+            <div className="flex flex-wrap gap-1.5 mb-5">
+              {project.tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag}
+                  className="text-[9px] font-medium px-2.5 py-1 rounded-md bg-primary/5 text-primary/60 border border-primary/8"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <div className="flex items-center gap-1.5 text-xs font-medium text-primary group-hover:gap-2.5 transition-all duration-300">
+              <span>Explore</span>
+              <ArrowUpRight size={13} className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </div>
           </div>
-
-          {/* Tags */}
-          <div className="flex flex-wrap gap-1.5 mb-5 relative z-10">
-            {project.tags.slice(0, 3).map((tag) => (
-              <span
-                key={tag}
-                className={`text-[9px] font-medium px-2.5 py-1 rounded-md ${
-                  jellyMode
-                    ? "jelly-badge-teal"
-                    : "bg-primary/5 text-primary/60 border border-primary/8"
-                }`}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          {/* CTA */}
-          <div className="flex items-center gap-1.5 text-xs font-medium text-primary group-hover:gap-2.5 transition-all duration-300 relative z-10">
-            <span>Explore</span>
-            <ArrowUpRight size={13} className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-          </div>
-        </div>
+        </JellyMaterialCard>
       </Magnetic>
     </Link>
   );
 
+  // Desktop: The entire section is pinned. Header is positioned absolutely on the left,
+  // cards scroll horizontally in the center-right area.
+  if (isDesktop) {
+    return (
+      <section ref={sectionRef} className="relative h-screen overflow-hidden jelly-section-bg flex items-center">
+        {/* Single row: header on left, scrolling cards on right — both vertically centered */}
+        <div
+          ref={trackRef}
+          className="flex items-center gap-8 pr-[30vw]"
+          style={{ width: "max-content" }}
+        >
+          {/* Header block — fixed width, first item in the scroll track */}
+          <div className="w-[360px] flex-shrink-0 pl-[max(2rem,calc((100vw-1280px)/2))] pr-8">
+            <p className={`text-[11px] font-mono uppercase tracking-[0.2em] mb-5 ${
+              jellyMode ? "jelly-section-label text-primary/60" : "text-muted-foreground/60"
+            }`}>
+              <span className="inline-block w-6 h-px bg-current mr-3 align-middle" />
+              Projects
+            </p>
+            <h2 className={`font-display text-4xl lg:text-[3.25rem] tracking-[-0.03em] leading-[1.05] ${
+              jellyMode ? "jelly-section-title" : "text-foreground"
+            }`} style={{ fontStyle: "italic", fontWeight: 400 }}>
+              Engineering that pushes boundaries
+            </h2>
+            <p className="text-[0.85rem] text-muted-foreground mt-5 leading-[1.8]">
+              A selection of hardware engineering, test fixture, and research projects.
+            </p>
+          </div>
+
+          {/* Project cards */}
+          {projects.map((project, i) => renderCard(project, i, true))}
+        </div>
+      </section>
+    );
+  }
+
+  // Mobile: Vertical grid
   return (
     <div className="jelly-section-bg relative">
-      {/* Section header */}
-      <div className="mb-14 lg:mb-20 container">
+      <div className="mb-14 container">
         <ScrollReveal mode="up" distance={30} duration={0.7}>
           <p className={`text-[11px] font-mono uppercase tracking-[0.2em] mb-5 ${
             jellyMode ? "jelly-section-label text-primary/60" : "text-muted-foreground/60"
@@ -249,7 +273,7 @@ export function ProjectsSection() {
           </p>
         </ScrollReveal>
         <TextReveal mode="lines" duration={1} stagger={0.1}>
-          <h2 className={`font-display text-4xl sm:text-5xl md:text-[3.5rem] tracking-[-0.03em] leading-[1.05] max-w-2xl ${
+          <h2 className={`font-display text-4xl sm:text-5xl tracking-[-0.03em] leading-[1.05] max-w-2xl ${
             jellyMode ? "jelly-section-title" : "text-foreground"
           }`} style={{ fontStyle: "italic", fontWeight: 400 }}>
             Engineering that pushes boundaries
@@ -262,23 +286,9 @@ export function ProjectsSection() {
         </ScrollReveal>
       </div>
 
-      {/* Desktop: Horizontal scroll gallery */}
-      {isDesktop ? (
-        <section ref={sectionRef} className="relative overflow-hidden">
-          <div
-            ref={trackRef}
-            className="flex gap-8 pl-[max(2rem,calc((100vw-1280px)/2+3rem))] pr-[30vw] py-4"
-            style={{ width: "max-content" }}
-          >
-            {projects.map((project, i) => renderCard(project, i, true))}
-          </div>
-        </section>
-      ) : (
-        /* Mobile: Vertical grid */
-        <div ref={mobileGridRef} className="grid grid-cols-1 sm:grid-cols-2 gap-4 container">
-          {projects.map((project, i) => renderCard(project, i, false))}
-        </div>
-      )}
+      <div ref={mobileGridRef} className="grid grid-cols-1 sm:grid-cols-2 gap-4 container">
+        {projects.map((project, i) => renderCard(project, i, false))}
+      </div>
     </div>
   );
 }

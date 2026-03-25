@@ -28,7 +28,7 @@ import { SplitText } from "gsap/SplitText";
 gsap.registerPlugin(ScrollTrigger, SplitText);
 
 const Spline = lazy(() => import("@splinetool/react-spline"));
-const HeroCrossSection = lazy(() => import("@/components/anchors/HeroCrossSection"));
+// HeroCrossSection removed — Spline robot shows in both modes
 
 const companies = [
   { name: "Meta", active: true },
@@ -490,14 +490,8 @@ export function HeroSection() {
               }}
             />
             
-            {/* HeroCrossSection in jelly mode, Spline in standard mode */}
-            {jellyMode ? (
-              <Suspense fallback={<HeroFallbackVisual />}>
-                <HeroCrossSection />
-              </Suspense>
-            ) : (
-              splineContent
-            )}
+            {/* Spline robot in both modes */}
+            {splineContent}
             
             {/* Edge fades */}
             <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background via-background/70 to-transparent pointer-events-none z-20" />

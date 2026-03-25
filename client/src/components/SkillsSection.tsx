@@ -1,14 +1,13 @@
 /**
  * SkillsSection — Premium GSAP-powered skills display.
- * 
- * Anti-AI-made: Instrument Serif italic heading, expo.out easing,
- * varied card border-radius, authored spacing.
+ * Uses JellyMaterialCard for GPU-rendered jelly material on all cards.
  */
 import { useRef, useEffect } from "react";
 import { TextReveal } from "@/components/animation/TextReveal";
 import { ScrollReveal } from "@/components/animation/ScrollReveal";
 import { useAnimation } from "@/components/animation/AnimationProvider";
 import { useJellyMode } from "@/contexts/JellyModeContext";
+import { JellyMaterialCard } from "@/components/JellyMaterialCard";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -16,7 +15,7 @@ const skillCategories = [
   {
     category: "Engineering & Design",
     number: "01",
-    color: "teal" as const,
+    hue: 200,
     skills: [
       { name: "Product Design & DfX", level: 95 },
       { name: "SolidWorks / NX CAD", level: 92 },
@@ -30,7 +29,7 @@ const skillCategories = [
   {
     category: "Quality & Compliance",
     number: "02",
-    color: "amber" as const,
+    hue: 65,
     skills: [
       { name: "Failure Analysis / Root Cause", level: 96 },
       { name: "Six Sigma / DOE", level: 88 },
@@ -43,7 +42,7 @@ const skillCategories = [
   {
     category: "Manufacturing & Test",
     number: "03",
-    color: "teal" as const,
+    hue: 160,
     skills: [
       { name: "NPI (EVT → PVT)", level: 93 },
       { name: "Test Automation", level: 90 },
@@ -56,7 +55,7 @@ const skillCategories = [
   {
     category: "Software & Project Mgmt",
     number: "04",
-    color: "amber" as const,
+    hue: 280,
     skills: [
       { name: "Python Scripting", level: 88 },
       { name: "Minitab / MATLAB", level: 85 },
@@ -134,7 +133,6 @@ export function SkillsSection() {
 
   return (
     <div className="jelly-section-bg relative">
-      {/* Section header */}
       <div className="mb-14 lg:mb-20">
         <ScrollReveal mode="up" distance={30} duration={0.7}>
           <p className={`text-[11px] font-mono uppercase tracking-[0.2em] mb-5 ${
@@ -153,62 +151,60 @@ export function SkillsSection() {
         </TextReveal>
       </div>
 
-      {/* Category cards */}
       <div ref={gridRef} className="grid sm:grid-cols-2 gap-4 sm:gap-5">
         {skillCategories.map((cat, i) => (
-          <div
+          <JellyMaterialCard
             key={cat.number}
-            data-skill-card
-            className={`group transition-all duration-400 ${
-              jellyMode
-                ? "jelly-card p-7"
-                : "bg-card/30 border border-border/30 p-7 hover:bg-card/60 hover:border-border/50 hover:shadow-lg hover:shadow-primary/5"
-            }`}
-            style={{ borderRadius: jellyMode ? undefined : cardRadii[i % cardRadii.length] }}
+            hue={cat.hue}
+            intensity={0.65}
+            borderRadius={cardRadii[i % cardRadii.length]}
+            className="group transition-all duration-400"
           >
-            {/* Category header */}
-            <div className="flex items-center gap-3 mb-6">
-              <span className={`w-10 h-10 flex items-center justify-center text-[10px] font-mono font-bold shrink-0 transition-colors duration-300 ${
-                jellyMode
-                  ? `jelly-icon-box jelly-icon-box-${cat.color}`
-                  : "bg-primary/6 text-primary group-hover:bg-primary/10"
-              }`} style={{ borderRadius: "0.75rem" }}>
-                {cat.number}
-              </span>
-              <h3 className="text-sm font-semibold text-foreground tracking-[-0.01em]">{cat.category}</h3>
-            </div>
+            <div data-skill-card className="p-7">
+              {/* Category header */}
+              <div className="flex items-center gap-3 mb-6">
+                <span className={`w-10 h-10 flex items-center justify-center text-[10px] font-mono font-bold shrink-0 rounded-xl ${
+                  jellyMode
+                    ? "bg-white/10 text-white/80"
+                    : "bg-primary/6 text-primary group-hover:bg-primary/10"
+                } transition-colors duration-300`}>
+                  {cat.number}
+                </span>
+                <h3 className="text-sm font-semibold text-foreground tracking-[-0.01em]">{cat.category}</h3>
+              </div>
 
-            {/* Skill bars */}
-            <div className="space-y-3.5">
-              {cat.skills.map((skill) => (
-                <div key={skill.name}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] text-foreground/75">{skill.name}</span>
-                    <span
-                      className="text-[10px] font-mono text-muted-foreground/40 tabular-nums"
-                      data-skill-counter={skill.level}
-                    >
-                      {reducedMotion ? `${skill.level}%` : "0%"}
-                    </span>
+              {/* Skill bars */}
+              <div className="space-y-3.5">
+                {cat.skills.map((skill) => (
+                  <div key={skill.name}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] text-foreground/75">{skill.name}</span>
+                      <span
+                        className="text-[10px] font-mono text-muted-foreground/40 tabular-nums"
+                        data-skill-counter={skill.level}
+                      >
+                        {reducedMotion ? `${skill.level}%` : "0%"}
+                      </span>
+                    </div>
+                    <div className={`h-[5px] rounded-full overflow-hidden ${
+                      jellyMode ? "bg-foreground/5" : "bg-muted/50"
+                    }`}>
+                      <div
+                        className={`h-full rounded-full ${jellyMode ? "jelly-skill-bar" : ""}`}
+                        data-skill-bar={skill.level}
+                        style={{
+                          background: jellyMode
+                            ? undefined
+                            : `linear-gradient(90deg, oklch(from var(--primary) l c h / 40%) 0%, oklch(from var(--primary) l c h / 75%) 100%)`,
+                          width: reducedMotion ? `${skill.level}%` : "0%",
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className={`h-[5px] rounded-full overflow-hidden ${
-                    jellyMode ? "bg-foreground/5" : "bg-muted/50"
-                  }`}>
-                    <div
-                      className={`h-full rounded-full ${jellyMode ? "jelly-skill-bar" : ""}`}
-                      data-skill-bar={skill.level}
-                      style={{
-                        background: jellyMode
-                          ? undefined
-                          : `linear-gradient(90deg, oklch(from var(--primary) l c h / 40%) 0%, oklch(from var(--primary) l c h / 75%) 100%)`,
-                        width: reducedMotion ? `${skill.level}%` : "0%",
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          </JellyMaterialCard>
         ))}
       </div>
     </div>

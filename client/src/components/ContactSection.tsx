@@ -1,8 +1,6 @@
 /**
  * ContactSection + Footer — Premium GSAP-powered contact section.
- * 
- * Anti-AI-made: Instrument Serif italic heading, expo.out easing,
- * varied card border-radius, authored spacing.
+ * Uses JellyMaterialCard for GPU-rendered jelly material on all cards.
  */
 import { useRef, useEffect } from "react";
 import { Mail, Linkedin, Phone, ArrowUpRight, ChevronUp } from "lucide-react";
@@ -11,13 +9,14 @@ import { ScrollReveal } from "@/components/animation/ScrollReveal";
 import { Magnetic } from "@/components/animation/Magnetic";
 import { useAnimation } from "@/components/animation/AnimationProvider";
 import { useJellyMode } from "@/contexts/JellyModeContext";
+import { JellyMaterialCard } from "@/components/JellyMaterialCard";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 const contactLinks = [
-  { label: "Email", value: "lukhihardik11@gmail.com", href: "mailto:lukhihardik11@gmail.com", Icon: Mail, color: "teal" as const },
-  { label: "LinkedIn", value: "linkedin.com/in/hardiklukhi", href: "https://linkedin.com/in/hardiklukhi", Icon: Linkedin, color: "amber" as const },
-  { label: "Phone", value: "361-228-5831", href: "tel:+13612285831", Icon: Phone, color: "teal" as const },
+  { label: "Email", value: "lukhihardik11@gmail.com", href: "mailto:lukhihardik11@gmail.com", Icon: Mail, hue: 200 },
+  { label: "LinkedIn", value: "linkedin.com/in/hardiklukhi", href: "https://linkedin.com/in/hardiklukhi", Icon: Linkedin, hue: 220 },
+  { label: "Phone", value: "361-228-5831", href: "tel:+13612285831", Icon: Phone, hue: 160 },
 ];
 
 export function ContactSection() {
@@ -47,9 +46,14 @@ export function ContactSection() {
     return () => ctx.revert();
   }, [reducedMotion]);
 
+  const cardRadii = [
+    "1.25rem 0.75rem 0.75rem 1rem",
+    "0.75rem 1rem 1rem 0.75rem",
+    "0.75rem 1.25rem 1rem 1.25rem",
+  ];
+
   return (
     <div className="jelly-section-bg relative">
-      {/* Section header — left-aligned for variety, not centered */}
       <div className="mb-14 lg:mb-20">
         <ScrollReveal mode="up" distance={30} duration={0.7}>
           <p className={`text-[11px] font-mono uppercase tracking-[0.2em] mb-5 ${
@@ -74,22 +78,19 @@ export function ContactSection() {
         </ScrollReveal>
       </div>
 
-      {/* Primary CTA with Magnetic hover + jelly button */}
+      {/* Primary CTA with Magnetic hover + JellyMaterialCard */}
       <ScrollReveal mode="scale" className="mb-14">
         <Magnetic strength={0.3}>
-          <a
-            href="mailto:lukhihardik11@gmail.com"
-            className={`inline-flex items-center gap-2.5 px-8 py-4 text-sm font-semibold no-underline transition-all duration-300 active:scale-[0.98] ${
-              jellyMode
-                ? "jelly-btn jelly-btn-teal"
-                : "bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02]"
-            }`}
-            style={{ borderRadius: "1rem 0.75rem 1rem 0.75rem" }}
-          >
-            <Mail size={16} />
-            Say Hello
-            <ArrowUpRight size={14} />
-          </a>
+          <JellyMaterialCard hue={200} intensity={0.8} borderRadius="1rem 0.75rem 1rem 0.75rem" className="inline-block">
+            <a
+              href="mailto:lukhihardik11@gmail.com"
+              className="inline-flex items-center gap-2.5 px-8 py-4 text-sm font-semibold no-underline text-foreground transition-all duration-300 active:scale-[0.98]"
+            >
+              <Mail size={16} />
+              Say Hello
+              <ArrowUpRight size={14} />
+            </a>
+          </JellyMaterialCard>
         </Magnetic>
       </ScrollReveal>
 
@@ -104,33 +105,27 @@ export function ContactSection() {
             className="no-underline block"
             data-reveal
           >
-            <div className={`group text-center cursor-pointer transition-all duration-400 ${
-              jellyMode
-                ? "jelly-card p-6"
-                : "bg-card/30 border border-border/30 p-6 hover:bg-card/60 hover:border-border/50 hover:shadow-lg hover:shadow-primary/5"
-            }`} style={{
-              borderRadius: i === 0 ? "1.25rem 0.75rem 0.75rem 1rem" : i === 1 ? "0.75rem 1rem 1rem 0.75rem" : "0.75rem 1.25rem 1rem 1.25rem",
-            }}>
-              {/* Caustic glow */}
-              {jellyMode && (
-                <div
-                  className={`jelly-caustic ${link.color === "teal" ? "jelly-caustic-teal" : "jelly-caustic-amber"}`}
-                  style={{ width: "80%", height: "60%", bottom: "-10%", left: "10%", zIndex: 0 }}
-                />
-              )}
-              <div className={`w-11 h-11 mx-auto mb-4 flex items-center justify-center transition-colors duration-300 relative z-10 ${
-                jellyMode
-                  ? `jelly-icon-box jelly-icon-box-${link.color}`
-                  : "bg-primary/6 text-primary group-hover:bg-primary/10"
-              }`} style={{ borderRadius: "0.75rem" }}>
-                <link.Icon size={17} strokeWidth={1.5} />
+            <JellyMaterialCard
+              hue={link.hue}
+              intensity={0.6}
+              borderRadius={cardRadii[i]}
+              className="group h-full transition-all duration-400"
+            >
+              <div className="p-6 text-center cursor-pointer">
+                <div className={`w-11 h-11 mx-auto mb-4 flex items-center justify-center rounded-xl transition-colors duration-300 ${
+                  jellyMode
+                    ? "bg-white/10 text-white/80"
+                    : "bg-primary/6 text-primary group-hover:bg-primary/10"
+                }`}>
+                  <link.Icon size={17} strokeWidth={1.5} />
+                </div>
+                <div className="text-xs font-semibold text-foreground mb-1">{link.label}</div>
+                <div className="text-[11px] text-muted-foreground font-mono flex items-center justify-center gap-1">
+                  {link.value}
+                  <ArrowUpRight size={9} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                </div>
               </div>
-              <div className="text-xs font-semibold text-foreground mb-1 relative z-10">{link.label}</div>
-              <div className="text-[11px] text-muted-foreground font-mono flex items-center justify-center gap-1 relative z-10">
-                {link.value}
-                <ArrowUpRight size={9} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-              </div>
-            </div>
+            </JellyMaterialCard>
           </a>
         ))}
       </div>

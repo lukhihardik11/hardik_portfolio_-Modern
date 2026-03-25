@@ -1,8 +1,6 @@
 /**
  * EducationSection — Premium GSAP-powered education display.
- * 
- * Anti-AI-made: Instrument Serif italic heading, expo.out easing,
- * varied card border-radius, authored spacing.
+ * Uses JellyMaterialCard for GPU-rendered jelly material on all cards.
  */
 import { useRef, useEffect } from "react";
 import { GraduationCap, Award, Briefcase, MapPin } from "lucide-react";
@@ -10,13 +8,14 @@ import { TextReveal } from "@/components/animation/TextReveal";
 import { ScrollReveal } from "@/components/animation/ScrollReveal";
 import { useAnimation } from "@/components/animation/AnimationProvider";
 import { useJellyMode } from "@/contexts/JellyModeContext";
+import { JellyMaterialCard } from "@/components/JellyMaterialCard";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 const education = [
-  { degree: "M.S. Information Technology", school: "University of the Cumberlands", location: "Williamsburg, KY", year: "2023", gpa: "4.0 / 4.0", highlight: "Perfect GPA", color: "teal" as const },
-  { degree: "M.S. Mechanical Engineering", school: "Texas A&M University — Kingsville", location: "Kingsville, TX", year: "2019", gpa: "3.61 / 4.0", highlight: null, color: "amber" as const },
-  { degree: "B.E. Mechanical Engineering", school: "Gujarat Technological University", location: "Ahmedabad, India", year: "2016", gpa: "3.68 / 4.0", highlight: null, color: "teal" as const },
+  { degree: "M.S. Information Technology", school: "University of the Cumberlands", location: "Williamsburg, KY", year: "2023", gpa: "4.0 / 4.0", highlight: "Perfect GPA", hue: 200 },
+  { degree: "M.S. Mechanical Engineering", school: "Texas A&M University — Kingsville", location: "Kingsville, TX", year: "2019", gpa: "3.61 / 4.0", highlight: null, hue: 65 },
+  { degree: "B.E. Mechanical Engineering", school: "Gujarat Technological University", location: "Ahmedabad, India", year: "2016", gpa: "3.68 / 4.0", highlight: null, hue: 160 },
 ];
 
 const internships = [
@@ -25,6 +24,7 @@ const internships = [
     company: "Precision Technology Inc.",
     location: "Plano, TX",
     period: "May 2018 — Aug 2018",
+    hue: 230,
     highlights: [
       "Supported PCBA manufacturing process design and development, contributing to production efficiency improvements",
       "Assisted in implementing new manufacturing techniques to enhance production workflow",
@@ -35,6 +35,7 @@ const internships = [
     company: "Goyani Machines Private Limited",
     location: "Vadodara, India",
     period: "Apr 2015 — Jun 2015",
+    hue: 340,
     highlights: [
       "Assisted in mechanical design, prototyping, and design validation activities",
       "Gained hands-on experience in engineering processes and manufacturing operations",
@@ -93,7 +94,6 @@ export function EducationSection() {
 
   return (
     <div className="jelly-section-bg relative">
-      {/* Section header */}
       <div className="mb-14 lg:mb-20">
         <ScrollReveal mode="up" distance={30} duration={0.7}>
           <p className={`text-[11px] font-mono uppercase tracking-[0.2em] mb-5 ${
@@ -115,54 +115,42 @@ export function EducationSection() {
       {/* Degrees */}
       <div ref={degreeGridRef} className="grid sm:grid-cols-3 gap-4 sm:gap-5 mb-20 sm:mb-28">
         {education.map((edu, i) => (
-          <div
+          <JellyMaterialCard
             key={edu.degree}
-            data-reveal
-            className={`group relative transition-all duration-400 ${
-              jellyMode
-                ? "jelly-card p-7"
-                : "bg-card/30 border border-border/30 p-7 hover:bg-card/60 hover:border-border/50 hover:shadow-lg hover:shadow-primary/5"
-            }`}
-            style={{
-              borderRadius: jellyMode ? undefined : degreeRadii[i % degreeRadii.length],
-              borderTop: !jellyMode ? "2px solid var(--primary)" : undefined,
-            }}
+            hue={edu.hue}
+            intensity={0.65}
+            borderRadius={degreeRadii[i]}
+            className="group h-full transition-all duration-400"
+            style={{ borderTop: "2px solid var(--primary)" }}
           >
-            {/* Caustic glow */}
-            {jellyMode && (
-              <div
-                className={`jelly-caustic ${edu.color === "teal" ? "jelly-caustic-teal" : "jelly-caustic-amber"}`}
-                style={{ width: "100%", height: "50%", bottom: "-10%", left: "0", zIndex: 0 }}
-              />
-            )}
-            <div className={`w-11 h-11 mb-5 flex items-center justify-center transition-colors duration-300 relative z-10 ${
-              jellyMode
-                ? `jelly-icon-box jelly-icon-box-${edu.color}`
-                : "bg-primary/6 text-primary group-hover:bg-primary/10"
-            }`} style={{ borderRadius: "0.75rem" }}>
-              <GraduationCap size={19} strokeWidth={1.5} />
-            </div>
-            <h3 className="text-sm font-semibold text-foreground mb-1.5 relative z-10 tracking-[-0.01em]">{edu.degree}</h3>
-            <p className="text-xs text-primary font-medium mb-3 relative z-10">{edu.school}</p>
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground relative z-10">
-              <span className="flex items-center gap-1">
-                <MapPin size={10} />
-                {edu.location}
-              </span>
-              <span className="font-mono">{edu.year}</span>
-            </div>
-            <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/40 relative z-10">
-              <span className="text-xs font-medium text-foreground/75">{edu.gpa}</span>
-              {edu.highlight && (
-                <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${
-                  jellyMode ? "jelly-badge-teal" : "text-primary"
-                }`}>
-                  <Award size={10} />
-                  {edu.highlight}
+            <div data-reveal className="p-7">
+              <div className={`w-11 h-11 mb-5 flex items-center justify-center rounded-xl transition-colors duration-300 ${
+                jellyMode
+                  ? "bg-white/10 text-white/80"
+                  : "bg-primary/6 text-primary group-hover:bg-primary/10"
+              }`}>
+                <GraduationCap size={19} strokeWidth={1.5} />
+              </div>
+              <h3 className="text-sm font-semibold text-foreground mb-1.5 tracking-[-0.01em]">{edu.degree}</h3>
+              <p className="text-xs text-primary font-medium mb-3">{edu.school}</p>
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <MapPin size={10} />
+                  {edu.location}
                 </span>
-              )}
+                <span className="font-mono">{edu.year}</span>
+              </div>
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/40">
+                <span className="text-xs font-medium text-foreground/75">{edu.gpa}</span>
+                {edu.highlight && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-primary">
+                    <Award size={10} />
+                    {edu.highlight}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
+          </JellyMaterialCard>
         ))}
       </div>
 
@@ -176,34 +164,33 @@ export function EducationSection() {
 
       <div ref={internGridRef} className="grid sm:grid-cols-2 gap-4 sm:gap-5">
         {internships.map((intern, i) => (
-          <div
+          <JellyMaterialCard
             key={intern.role}
-            data-reveal
-            className={`group transition-all duration-400 ${
-              jellyMode
-                ? "jelly-card p-6"
-                : "bg-card/30 border border-border/30 p-6 hover:bg-card/60 hover:border-border/50"
-            }`}
-            style={{ borderRadius: i === 0 ? "1rem 0.75rem 0.75rem 1.25rem" : "0.75rem 1rem 1.25rem 0.75rem" }}
+            hue={intern.hue}
+            intensity={0.55}
+            borderRadius={i === 0 ? "1rem 0.75rem 0.75rem 1.25rem" : "0.75rem 1rem 1.25rem 0.75rem"}
+            className="group transition-all duration-400"
           >
-            <h4 className="text-sm font-semibold text-foreground mb-1.5 tracking-[-0.01em]">{intern.role}</h4>
-            <p className="text-xs text-primary font-medium mb-1">{intern.company}</p>
-            <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-4">
-              <span className="font-mono tracking-tight">{intern.period}</span>
-              <span className="flex items-center gap-1 text-muted-foreground/60">
-                <MapPin size={10} />
-                {intern.location}
-              </span>
+            <div data-reveal className="p-6">
+              <h4 className="text-sm font-semibold text-foreground mb-1.5 tracking-[-0.01em]">{intern.role}</h4>
+              <p className="text-xs text-primary font-medium mb-1">{intern.company}</p>
+              <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-4">
+                <span className="font-mono tracking-tight">{intern.period}</span>
+                <span className="flex items-center gap-1 text-muted-foreground/60">
+                  <MapPin size={10} />
+                  {intern.location}
+                </span>
+              </div>
+              <ul className="space-y-2.5">
+                {intern.highlights.map((h, j) => (
+                  <li key={j} className="text-[0.8rem] text-muted-foreground leading-relaxed flex gap-2.5">
+                    <span className="text-primary/30 mt-0.5 shrink-0 text-[8px]">●</span>
+                    <span>{h}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <ul className="space-y-2.5">
-              {intern.highlights.map((h, j) => (
-                <li key={j} className="text-[0.8rem] text-muted-foreground leading-relaxed flex gap-2.5">
-                  <span className="text-primary/30 mt-0.5 shrink-0 text-[8px]">●</span>
-                  <span>{h}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          </JellyMaterialCard>
         ))}
       </div>
     </div>

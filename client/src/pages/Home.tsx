@@ -53,10 +53,10 @@ export default function Home() {
       {/* Philosophy — cinematic interlude, self-contained */}
       <PhilosophySection />
 
-      {/* Projects — horizontal scroll, self-contained padding */}
-      <section id="projects" className="scroll-mt-20 pt-20 pb-24 lg:pt-28 lg:pb-32">
+      {/* Projects — horizontal scroll, self-contained (pinned full viewport on desktop) */}
+      <div id="projects" className="scroll-mt-20">
         <ProjectsSection />
-      </section>
+      </div>
 
       {/* Skills — tighter rhythm, alt background */}
       <section
